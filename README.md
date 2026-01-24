@@ -1,63 +1,6 @@
-# {{PROJECT_NAME}}
+# pfa
 
-{{PROJECT_DESCRIPTION}}
-
-## Using This Template
-
-This is a GitHub template repository optimized for **laptop-free development** using Claude Code. It enables a complete workflow—from feature ideation to production deployment—without local development tools.
-
-### Quick Start
-
-1. **Create your repository:**
-   ```bash
-   gh repo create my-project --template {{GITHUB_USER}}/flying-stick
-   cd my-project
-   ```
-
-2. **Replace all placeholders** (find and replace in your editor):
-
-   | Placeholder | Description | Example |
-   |-------------|-------------|---------|
-   | `{{PROJECT_NAME}}` | Your project name | `my-app` |
-   | `{{PROJECT_DESCRIPTION}}` | Brief description | `AI-powered task manager` |
-   | `{{GITHUB_USER}}` | Your GitHub username | `evehwang` |
-   | `{{AWS_REGION}}` | AWS region | `us-west-2` |
-   | `{{PYTHON_VERSION}}` | Python version | `3.12` |
-
-3. **Configure GitHub Secrets** (Settings → Secrets and variables → Actions):
-   - `AWS_ACCESS_KEY_ID` - IAM user access key
-   - `AWS_SECRET_ACCESS_KEY` - IAM user secret key
-   - `ANTHROPIC_API_KEY` - (optional) If using Claude API
-
-4. **Create AWS Secrets Manager secret:**
-   ```bash
-   aws secretsmanager create-secret \
-     --name {{PROJECT_NAME}}/prod \
-     --secret-string '{"ANTHROPIC_API_KEY": "sk-ant-..."}'
-   ```
-
-5. **Push changes and verify CI passes:**
-   ```bash
-   git add -A
-   git commit -m "Initialize project from template"
-   git push origin main
-   ```
-   Wait for the CI workflow to complete successfully. This is required before setting up branch protection.
-
-   After first deployment, your app will be available at `https://{repo-name}.evehwang.com`.
-
-6. **Configure branch protection** (Settings → Branches → Add rule):
-   - Branch name pattern: `main`
-   - ✅ Require a pull request before merging
-   - ✅ Require status checks to pass before merging
-     - Search and select: `lint`, `test`, `security` (the CI jobs)
-   - ✅ Require branches to be up to date before merging
-   
-   This creates your **deploy gate**: Claude Code pushes to a branch → opens PR → CI runs → you approve and merge in GitHub app → deploy runs.
-
-7. **Delete this "Using This Template" section** and update with your project's documentation.
-
----
+Personal finance app for tracking spending, budgets, and financial goals
 
 ## Development Workflow
 
@@ -111,7 +54,7 @@ make lint
 ## Project Structure
 
 ```
-{{PROJECT_NAME}}/
+pfa/
 ├── .github/
 │   ├── dependabot.yml          # Automated dependency updates
 │   ├── pull_request_template.md
@@ -182,7 +125,7 @@ If a deployment breaks:
 ```bash
 # Update the secret
 aws secretsmanager update-secret \
-  --secret-id {{PROJECT_NAME}}/prod \
+  --secret-id pfa/prod \
   --secret-string '{"ANTHROPIC_API_KEY": "new-key", "OTHER_SECRET": "value"}'
 ```
 
@@ -191,7 +134,7 @@ aws secretsmanager update-secret \
 ```python
 from src.utils.secrets import get_secret_value
 
-api_key = get_secret_value("{{PROJECT_NAME}}/prod", "ANTHROPIC_API_KEY")
+api_key = get_secret_value("pfa/prod", "ANTHROPIC_API_KEY")
 ```
 
 ## Spec-Driven Development

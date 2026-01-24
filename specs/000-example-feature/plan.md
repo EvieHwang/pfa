@@ -15,7 +15,7 @@
 ## Directory Structure
 
 ```
-{{PROJECT_NAME}}/
+pfa/
 ├── src/
 │   ├── [new-module]/
 │   │   ├── __init__.py

@@ -26,7 +26,7 @@ A developer wants to start a new AI-powered application without manual setup. Th
 **Acceptance Scenarios**:
 
 1. **Given** the flying-stick template exists on GitHub, **When** I click "Use this template" and create `my-new-project`, **Then** I receive a repository with complete directory structure matching the target state
-2. **Given** a new repo created from template, **When** I search for `{{PROJECT_NAME}}` in the codebase, **Then** I find exactly the documented placeholders and can replace them
+2. **Given** a new repo created from template, **When** I search for `pfa` in the codebase, **Then** I find exactly the documented placeholders and can replace them
 3. **Given** a new repo with placeholders replaced, **When** GitHub Actions run on push, **Then** CI workflow completes successfully (lint, security scan)
 
 ---
@@ -57,7 +57,7 @@ A developer needs their Lambda function to access the Anthropic API key. They st
 
 **Acceptance Scenarios**:
 
-1. **Given** a secret stored in AWS Secrets Manager named `{{PROJECT_NAME}}/prod`, **When** Lambda function cold starts, **Then** it fetches and caches the secret successfully
+1. **Given** a secret stored in AWS Secrets Manager named `pfa/prod`, **When** Lambda function cold starts, **Then** it fetches and caches the secret successfully
 2. **Given** GitHub Secrets contain AWS credentials, **When** deploy workflow runs, **Then** SAM deploy succeeds without any local environment variables
 3. **Given** a secret is rotated in Secrets Manager, **When** Lambda next cold starts, **Then** it retrieves the new value without redeployment
 
@@ -181,14 +181,14 @@ A developer needs to build a dashboard UI. They use the pre-configured React/Tai
 ### Key Entities
 
 **Template Placeholders**
-- `{{PROJECT_NAME}}` (string, required) - Used in README, package.json, template.yaml
-- `{{PROJECT_DESCRIPTION}}` (string, required) - README, CONSTITUTION.md
-- `{{GITHUB_USER}}` (string, required) - README clone URLs
-- `{{AWS_REGION}}` (string, default: us-west-2) - SAM config, GitHub Actions
+- `pfa` (string, required) - Used in README, package.json, template.yaml
+- `Personal finance app for tracking spending, budgets, and financial goals` (string, required) - README, CONSTITUTION.md
+- `EvieHwang` (string, required) - README clone URLs
+- `us-east-1` (string, default: us-west-2) - SAM config, GitHub Actions
 - `{{S3_FRONTEND_BUCKET}}` (string, required) - Deploy workflow, README
 - `{{CLOUDFRONT_DISTRIBUTION_ID}}` (string, required) - Deploy workflow
 - `{{LAMBDA_FUNCTION_NAME}}` (string, required) - template.yaml, rollback workflow
-- `{{PYTHON_VERSION}}` (string, default: 3.12) - CI workflow, pyproject.toml
+- `3.12` (string, default: 3.12) - CI workflow, pyproject.toml
 
 **GitHub Secrets Required**
 - `AWS_ACCESS_KEY_ID` (string) - IAM credentials for deployment

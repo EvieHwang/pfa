@@ -17,7 +17,7 @@ function App() {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex h-12 items-center justify-between px-4">
-          <h1 className="text-lg font-semibold">{"{{PROJECT_NAME}}"}</h1>
+          <h1 className="text-lg font-semibold">{"pfa"}</h1>
           <ThemeToggle />
         </div>
       </header>
@@ -28,7 +28,7 @@ function App() {
           {/* Welcome Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Welcome to {"{{PROJECT_NAME}}"}</CardTitle>
+              <CardTitle>Welcome to {"pfa"}</CardTitle>
               <CardDescription>
                 This is a template project with React, TypeScript, Tailwind CSS,
                 and shadcn/ui components configured for information-dense UIs.

@@ -258,16 +258,16 @@ The template must use these placeholders (to be replaced when creating a new pro
 
 | Placeholder | Description | Example |
 |-------------|-------------|---------|
-| `{{PROJECT_NAME}}` | Project name | `wm2` |
-| `{{PROJECT_DESCRIPTION}}` | Brief description | `AI-powered product classifier` |
-| `{{GITHUB_USER}}` | GitHub username | `EvieHwang` |
-| `{{AWS_REGION}}` | AWS region | `us-west-2` |
+| `pfa` | Project name | `wm2` |
+| `Personal finance app for tracking spending, budgets, and financial goals` | Brief description | `AI-powered product classifier` |
+| `EvieHwang` | GitHub username | `EvieHwang` |
+| `us-east-1` | AWS region | `us-west-2` |
 | `{{S3_BUCKET}}` | S3 bucket for artifacts | `wm2-artifacts` |
 | `{{S3_FRONTEND_BUCKET}}` | S3 bucket for frontend | `wm2-frontend` |
 | `{{CLOUDFRONT_DISTRIBUTION_ID}}` | CloudFront distribution | `E1234567890` |
 | `{{LAMBDA_FUNCTION_NAME}}` | Lambda function name | `wm2-classifier` |
 | `{{API_ENDPOINT}}` | API Gateway endpoint | `https://xxx.execute-api.us-west-2.amazonaws.com/prod` |
-| `{{PYTHON_VERSION}}` | Python version | `3.12` |
+| `3.12` | Python version | `3.12` |
 | `{{SOURCE_DIR}}` | Source code directory | `backend/src/` |
 
 ---

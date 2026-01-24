@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: "{{PROJECT_NAME}} - {{FEATURE_NAME}} API"
+  title: "pfa - {{FEATURE_NAME}} API"
   description: API contract for the {{FEATURE_NAME}} feature
   version: 1.0.0
 

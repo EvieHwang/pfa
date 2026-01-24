@@ -9,10 +9,10 @@ Usage:
     from utils.secrets import get_secret, get_secret_value
 
     # Get entire secret as dict
-    secret = get_secret("{{PROJECT_NAME}}/prod")
+    secret = get_secret("pfa/prod")
 
     # Get specific key from JSON secret
-    api_key = get_secret_value("{{PROJECT_NAME}}/prod", "ANTHROPIC_API_KEY")
+    api_key = get_secret_value("pfa/prod", "ANTHROPIC_API_KEY")
 """
 
 import json
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 _secrets_cache: dict[str, dict[str, Any]] = {}
 
 
-def get_secret(secret_name: str, region_name: str = "{{AWS_REGION}}") -> dict[str, Any]:
+def get_secret(secret_name: str, region_name: str = "us-east-1") -> dict[str, Any]:
     """
     Fetch a secret from AWS Secrets Manager.
 
@@ -96,7 +96,7 @@ def get_secret(secret_name: str, region_name: str = "{{AWS_REGION}}") -> dict[st
 
 
 def get_secret_value(
-    secret_name: str, key: str, region_name: str = "{{AWS_REGION}}"
+    secret_name: str, key: str, region_name: str = "us-east-1"
 ) -> str:
     """
     Get a specific value from a JSON secret.

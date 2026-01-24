@@ -1,7 +1,7 @@
 [project]
-name = "{{PROJECT_NAME}}"
+name = "pfa"
 version = "0.1.0"
-description = "{{PROJECT_DESCRIPTION}}"
+description = "Personal finance app for tracking spending, budgets, and financial goals"
 requires-python = ">=3.12"
 
 [tool.ruff]

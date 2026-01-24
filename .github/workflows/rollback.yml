@@ -59,13 +59,13 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: {{AWS_REGION}}
+          aws-region: us-east-1
 
       - name: Get Lambda function name
         id: get_function
         run: |
           FUNCTION_NAME=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`FunctionName`].OutputValue' \
             --output text)
           echo "function_name=$FUNCTION_NAME" >> $GITHUB_OUTPUT
@@ -118,7 +118,7 @@ jobs:
       - name: Verify rollback
         run: |
           ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text)
 
@@ -149,7 +149,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: {{AWS_REGION}}
+          aws-region: us-east-1
 
       - name: Restore previous frontend version
         run: |

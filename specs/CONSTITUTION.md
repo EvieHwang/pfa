@@ -1,10 +1,10 @@
-# {{PROJECT_NAME}} Constitution
+# pfa Constitution
 
-This document establishes the foundational architectural principles, design philosophy, and decision-making framework for the {{PROJECT_NAME}} project.
+This document establishes the foundational architectural principles, design philosophy, and decision-making framework for the pfa project.
 
 ## Project Mission
 
-{{PROJECT_DESCRIPTION}}
+Personal finance app for tracking spending, budgets, and financial goals
 
 ## Architectural Principles
 

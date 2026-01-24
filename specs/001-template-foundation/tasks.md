@@ -75,8 +75,8 @@
   - Lambda function defined with Python 3.12 runtime
   - API Gateway with `/health` GET endpoint
   - IAM role with `secretsmanager:GetSecretValue` permission
-  - All resource names use `{{PROJECT_NAME}}` placeholder
-  - `{{AWS_REGION}}` placeholder for region
+  - All resource names use `pfa` placeholder
+  - `us-east-1` placeholder for region
 - **Status**: [x] Complete
 
 ### T-1.6: Create Handler Tests
@@ -106,7 +106,7 @@
   - pip-audit checks for known vulnerabilities
   - ruff linting with fail on error
   - pytest with coverage report
-  - All steps use `{{PYTHON_VERSION}}` placeholder where appropriate
+  - All steps use `3.12` placeholder where appropriate
 - **Status**: [x] Complete
 
 ### T-2.2: Enhance Deploy Workflow
@@ -360,7 +360,7 @@
 - **Files**:
   - Create: `pyproject.toml`
 - **Acceptance**:
-  - Project name uses `{{PROJECT_NAME}}`
+  - Project name uses `pfa`
   - Ruff configuration (line length 100, select rules)
   - Pytest configuration (testpaths, coverage)
   - Python version requirement (3.12+)
@@ -392,10 +392,10 @@
 - **Contents**:
   ```
   # AWS Configuration (for local development only - production uses Secrets Manager)
-  AWS_REGION={{AWS_REGION}}
+  AWS_REGION=us-east-1
 
   # Secret name in AWS Secrets Manager
-  SECRET_NAME={{PROJECT_NAME}}/prod
+  SECRET_NAME=pfa/prod
 
   # Local development only (not used in production)
   # ANTHROPIC_API_KEY=

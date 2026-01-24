@@ -36,7 +36,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "{{PYTHON_VERSION}}"
+          python-version: "3.12"
 
       - name: Set up SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -46,7 +46,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: {{AWS_REGION}}
+          aws-region: us-east-1
 
       - name: SAM Build
         run: sam build
@@ -55,7 +55,7 @@ jobs:
         run: |
           DOMAIN_NAME="${{ github.event.repository.name }}.evehwang.com"
           sam deploy \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
@@ -65,26 +65,26 @@ jobs:
         id: get_outputs
         run: |
           ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text)
           echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
           echo "API Endpoint: $ENDPOINT"
 
           FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' \
             --output text)
           echo "frontend_bucket=$FRONTEND_BUCKET" >> $GITHUB_OUTPUT
 
           CF_DISTRIBUTION=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
             --output text)
           echo "cf_distribution=$CF_DISTRIBUTION" >> $GITHUB_OUTPUT
 
           APP_URL=$(aws cloudformation describe-stacks \
-            --stack-name {{PROJECT_NAME}}-stack \
+            --stack-name pfa-stack \
             --query 'Stacks[0].Outputs[?OutputKey==`AppUrl`].OutputValue' \
             --output text)
           echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
@@ -156,7 +156,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: {{AWS_REGION}}
+          aws-region: us-east-1
 
       - name: Sync to S3
         if: steps.check_frontend.outputs.exists == 'true'

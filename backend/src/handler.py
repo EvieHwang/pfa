@@ -1,5 +1,5 @@
 """
-Lambda handler for {{PROJECT_NAME}}.
+Lambda handler for pfa.
 
 This module provides the main entry point for AWS Lambda invocations.
 """
@@ -51,7 +51,7 @@ def health_check() -> dict:
             {
                 "status": "healthy",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "service": "{{PROJECT_NAME}}",
+                "service": "pfa",
             }
         ),
     }

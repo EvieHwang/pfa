@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  {{PROJECT_NAME}} - {{PROJECT_DESCRIPTION}}
+  pfa - Personal finance app for tracking spending, budgets, and financial goals
 
 Globals:
   Function:
@@ -12,8 +12,8 @@ Globals:
       - x86_64
     Environment:
       Variables:
-        SECRET_NAME: {{PROJECT_NAME}}/prod
-        AWS_REGION_NAME: {{AWS_REGION}}
+        SECRET_NAME: pfa/prod
+        AWS_REGION_NAME: us-east-1
         TRACE_BUCKET: !Ref TraceBucket
 
 Parameters:
@@ -45,17 +45,17 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "{{PROJECT_NAME}}-${Environment}"
+      FunctionName: !Sub "pfa-${Environment}"
       CodeUri: backend/
       Handler: src.handler.lambda_handler
-      Description: "{{PROJECT_DESCRIPTION}}"
+      Description: "Personal finance app for tracking spending, budgets, and financial goals"
       Policies:
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
-              Resource: !Sub "arn:aws:secretsmanager:{{AWS_REGION}}:${AWS::AccountId}:secret:{{PROJECT_NAME}}/*"
+              Resource: !Sub "arn:aws:secretsmanager:us-east-1:${AWS::AccountId}:secret:pfa/*"
             - Effect: Allow
               Action:
                 - logs:CreateLogGroup
@@ -94,7 +94,7 @@ Resources:
   TraceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "{{PROJECT_NAME}}-traces-${Environment}"
+      BucketName: !Sub "pfa-traces-${Environment}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -115,7 +115,7 @@ Resources:
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "{{PROJECT_NAME}}-api-${Environment}"
+      Name: !Sub "pfa-api-${Environment}"
       StageName: !Ref Environment
       Cors:
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
@@ -126,7 +126,7 @@ Resources:
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "{{PROJECT_NAME}}-frontend-${Environment}"
+      BucketName: !Sub "pfa-frontend-${Environment}"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -138,7 +138,7 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: !Sub "{{PROJECT_NAME}}-oac-${Environment}"
+        Name: !Sub "pfa-oac-${Environment}"
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -221,7 +221,7 @@ Resources:
 Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ApiGateway}.execute-api.{{AWS_REGION}}.amazonaws.com/${Environment}/"
+    Value: !Sub "https://${ApiGateway}.execute-api.us-east-1.amazonaws.com/${Environment}/"
 
   FunctionArn:
     Description: "Lambda Function ARN"
