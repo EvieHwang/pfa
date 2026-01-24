@@ -2,6 +2,9 @@
 
 Personal finance app for tracking spending, budgets, and financial goals
 
+[![CI](https://github.com/EvieHwang/pfa/actions/workflows/ci.yml/badge.svg)](https://github.com/EvieHwang/pfa/actions/workflows/ci.yml)
+[![Deploy](https://github.com/EvieHwang/pfa/actions/workflows/deploy.yml/badge.svg)](https://github.com/EvieHwang/pfa/actions/workflows/deploy.yml)
+
 ## Development Workflow
 
 This template is optimized for **cloud-based development** using Claude Code (CITA). Local development is optional.
