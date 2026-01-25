@@ -90,6 +90,10 @@ chmod *
 - **Do not merge PRs**: Leave PRs open for human review unless explicitly instructed
 - **Do not push to main**: All changes to main must go through approved PRs. Never push directly to main.
 
+### Pull Request Process
+
+After pushing a feature branch, always create the PR using `gh pr create`. Do not leave branches without an open PR. Confirm creation with `gh pr list`.
+
 ### Development and Deployment
 - **Build and test**: Run build processes, test suites, and validation scripts
 - **Install dependencies**: Add, update, or remove project dependencies as needed
