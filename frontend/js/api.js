@@ -188,8 +188,9 @@ const API = {
 
     // Categories endpoints
     categories: {
-        async list() {
-            return API.get('/categories');
+        async list(includeInactive = false) {
+            const params = includeInactive ? { include_inactive: 'true' } : {};
+            return API.get('/categories', params);
         },
 
         async create(data) {

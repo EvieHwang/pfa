@@ -818,6 +818,78 @@ input:focus, select:focus {
     }
 }
 
+/* Category Management */
+.category-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.category-item:last-child {
+    border-bottom: none;
+}
+
+.category-item.category-child {
+    padding-left: 24px;
+}
+
+.category-item.category-inactive {
+    opacity: 0.5;
+    background: var(--color-input-bg);
+}
+
+.category-item.category-inactive .category-name {
+    text-decoration: line-through;
+}
+
+.category-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.category-indent {
+    color: var(--color-text-secondary);
+    font-family: monospace;
+}
+
+.category-name {
+    font-weight: 500;
+}
+
+.category-type {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.category-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.category-badge.inactive {
+    background: var(--color-warning);
+    color: white;
+}
+
+.category-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-warning {
+    color: var(--color-warning);
+}
+
+.btn-warning:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
 /* Tabulator Overrides */
 .tabulator {
     border: none;

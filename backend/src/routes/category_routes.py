@@ -7,14 +7,25 @@ from ..models import Category
 
 @route("/categories", method="GET")
 def list_categories(event):
-    """List all categories with parent names."""
-    rows = database.fetch_all(
-        """SELECT c.id, c.name, c.category_type, c.parent_id, c.display_order,
-                  c.created_at, p.name as parent_name
-           FROM categories c
-           LEFT JOIN categories p ON c.parent_id = p.id
-           ORDER BY c.display_order, c.name"""
-    )
+    """List all categories with parent names.
+
+    Query params:
+        include_inactive: if "true", include inactive categories (for Settings)
+    """
+    query_params = event.get("queryStringParameters") or {}
+    include_inactive = query_params.get("include_inactive", "").lower() == "true"
+
+    query = """SELECT c.id, c.name, c.category_type, c.parent_id, c.display_order,
+                      c.is_active, c.created_at, p.name as parent_name
+               FROM categories c
+               LEFT JOIN categories p ON c.parent_id = p.id"""
+
+    if not include_inactive:
+        query += " WHERE c.is_active = 1"
+
+    query += " ORDER BY c.display_order, c.name"
+
+    rows = database.fetch_all(query)
 
     categories = [Category.from_row(tuple(row)).to_dict() for row in rows]
 
@@ -53,7 +64,7 @@ def create_category(event):
     # Fetch and return
     row = database.fetch_one(
         """SELECT c.id, c.name, c.category_type, c.parent_id, c.display_order,
-                  c.created_at, p.name as parent_name
+                  c.is_active, c.created_at, p.name as parent_name
            FROM categories c
            LEFT JOIN categories p ON c.parent_id = p.id
            WHERE c.id = ?""",
@@ -107,18 +118,36 @@ def update_category(event):
         updates.append("display_order = ?")
         params.append(body["display_order"])
 
+    # Handle is_active (deactivation/reactivation)
+    is_deactivating = False
+    if "is_active" in body:
+        new_is_active = 1 if body["is_active"] else 0
+        updates.append("is_active = ?")
+        params.append(new_is_active)
+        is_deactivating = new_is_active == 0
+
     if not updates:
         return error_response(400, "No valid fields to update", "BAD_REQUEST")
 
     params.append(category_id)
     query = f"UPDATE categories SET {', '.join(updates)} WHERE id = ?"
     database.execute_query(query, tuple(params))
+
+    # If deactivating, clear category from all transactions (they go to review queue)
+    if is_deactivating:
+        database.execute_query(
+            """UPDATE transactions
+               SET category_id = NULL, needs_review = 1
+               WHERE category_id = ?""",
+            (category_id,)
+        )
+
     database.commit()
 
     # Return updated
     row = database.fetch_one(
         """SELECT c.id, c.name, c.category_type, c.parent_id, c.display_order,
-                  c.created_at, p.name as parent_name
+                  c.is_active, c.created_at, p.name as parent_name
            FROM categories c
            LEFT JOIN categories p ON c.parent_id = p.id
            WHERE c.id = ?""",

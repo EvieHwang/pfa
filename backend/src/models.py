@@ -40,6 +40,7 @@ class Category:
     parent_id: int | None = None
     parent_name: str | None = None
     display_order: int = 0
+    is_active: bool = True
     created_at: datetime = field(default_factory=datetime.utcnow)
 
     @classmethod
@@ -50,8 +51,9 @@ class Category:
             category_type=row[2],
             parent_id=row[3] if len(row) > 3 else None,
             display_order=row[4] if len(row) > 4 else 0,
-            created_at=datetime.fromisoformat(row[5]) if len(row) > 5 and row[5] else datetime.utcnow(),
-            parent_name=row[6] if len(row) > 6 else None
+            is_active=bool(row[5]) if len(row) > 5 else True,
+            created_at=datetime.fromisoformat(row[6]) if len(row) > 6 and row[6] else datetime.utcnow(),
+            parent_name=row[7] if len(row) > 7 else None
         )
 
     def to_dict(self) -> dict:
@@ -62,6 +64,7 @@ class Category:
             "parent_id": self.parent_id,
             "parent_name": self.parent_name,
             "display_order": self.display_order,
+            "is_active": self.is_active,
         }
 
 
