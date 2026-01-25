@@ -1,179 +1,104 @@
-import { Routes, Route, NavLink, Navigate } from "react-router-dom"
 import { ThemeToggle } from "./components/ThemeToggle"
-import { ReviewBadge } from "./components/ReviewBadge"
-import { ReviewQueue } from "./pages/ReviewQueue"
-import { RulesManager } from "./pages/Settings/RulesManager"
-import { cn } from "@/lib/utils"
-import { LayoutDashboard, ListTodo, Settings, Upload } from "lucide-react"
-
-// Placeholder pages (to be implemented)
-function Dashboard() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <p className="text-muted-foreground">
-        Dashboard view coming soon. For now, use the Review queue to categorize transactions.
-      </p>
-    </div>
-  )
-}
-
-function Transactions() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Transactions</h1>
-      <p className="text-muted-foreground">
-        Transaction list coming soon. Use the Upload button to add transactions.
-      </p>
-    </div>
-  )
-}
-
-function SettingsPage() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
-      <div className="grid gap-4 md:grid-cols-2">
-        <NavLink
-          to="/settings/rules"
-          className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-        >
-          <h3 className="font-semibold">Categorization Rules</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage auto-categorization rules for transactions
-          </p>
-        </NavLink>
-      </div>
-    </div>
-  )
-}
-
-function NavItem({
-  to,
-  children,
-  icon: Icon,
-  badge,
-}: {
-  to: string
-  children: React.ReactNode
-  icon: React.ComponentType<{ className?: string }>
-  badge?: React.ReactNode
-}) {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-          isActive
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-        )
-      }
-    >
-      <Icon className="h-4 w-4" />
-      {children}
-      {badge}
-    </NavLink>
-  )
-}
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 function App() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            <NavLink to="/" className="text-lg font-bold">
-              PFA
-            </NavLink>
-            <nav className="hidden md:flex items-center gap-1">
-              <NavItem to="/" icon={LayoutDashboard}>
-                Dashboard
-              </NavItem>
-              <NavItem to="/transactions" icon={Upload}>
-                Transactions
-              </NavItem>
-              <NavItem to="/review" icon={ListTodo} badge={<ReviewBadge />}>
-                Review
-              </NavItem>
-              <NavItem to="/settings" icon={Settings}>
-                Settings
-              </NavItem>
-            </nav>
-          </div>
+      <header className="border-b">
+        <div className="container mx-auto flex h-12 items-center justify-between px-4">
+          <h1 className="text-lg font-semibold">{"pfa"}</h1>
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex justify-around py-2">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              cn(
-                "flex flex-col items-center gap-1 px-3 py-1 text-xs",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )
-            }
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            Dashboard
-          </NavLink>
-          <NavLink
-            to="/transactions"
-            className={({ isActive }) =>
-              cn(
-                "flex flex-col items-center gap-1 px-3 py-1 text-xs",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )
-            }
-          >
-            <Upload className="h-5 w-5" />
-            Transactions
-          </NavLink>
-          <NavLink
-            to="/review"
-            className={({ isActive }) =>
-              cn(
-                "flex flex-col items-center gap-1 px-3 py-1 text-xs relative",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )
-            }
-          >
-            <ListTodo className="h-5 w-5" />
-            Review
-            <span className="absolute -top-1 -right-1">
-              <ReviewBadge className="scale-75" />
-            </span>
-          </NavLink>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              cn(
-                "flex flex-col items-center gap-1 px-3 py-1 text-xs",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )
-            }
-          >
-            <Settings className="h-5 w-5" />
-            Settings
-          </NavLink>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 pb-20 md:pb-6">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/review" element={<ReviewQueue />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/rules" element={<RulesManager />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+      <main className="container mx-auto p-4">
+        <div className="mx-auto max-w-2xl space-y-6">
+          {/* Welcome Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome to {"pfa"}</CardTitle>
+              <CardDescription>
+                This is a template project with React, TypeScript, Tailwind CSS,
+                and shadcn/ui components configured for information-dense UIs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">
+                  Name
+                </label>
+                <Input id="name" placeholder="Enter your name" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="message" className="text-sm font-medium">
+                  Message
+                </label>
+                <Textarea id="message" placeholder="Type your message here" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline">Cancel</Button>
+              <Button>Submit</Button>
+            </CardFooter>
+          </Card>
+
+          {/* Button Variants Demo */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Button Variants</CardTitle>
+              <CardDescription>
+                All available button styles including compact variant for dense
+                layouts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="default">Default</Button>
+                <Button variant="secondary">Secondary</Button>
+                <Button variant="outline">Outline</Button>
+                <Button variant="ghost">Ghost</Button>
+                <Button variant="link">Link</Button>
+                <Button variant="destructive">Destructive</Button>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="lg">Large</Button>
+                <Button size="default">Default</Button>
+                <Button size="sm">Small</Button>
+                <Button size="compact">Compact</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Theme Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Theme System</CardTitle>
+              <CardDescription>
+                Click the icon in the header to cycle through light, dark, and
+                system themes. The theme persists in localStorage.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                The design system uses CSS variables for colors, enabling
+                instant theme switching without page reload. The theme is
+                applied before React hydration to prevent flash of wrong theme.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   )

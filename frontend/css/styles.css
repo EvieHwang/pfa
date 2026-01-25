@@ -442,62 +442,6 @@ input:focus, select:focus {
 .rule-actions, .budget-actions {
     display: flex;
     gap: 8px;
-    align-items: center;
-}
-
-.rule-active-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-}
-
-.rule-active-toggle input[type="checkbox"] {
-    width: auto;
-}
-
-.rule-priority {
-    color: var(--color-text-secondary);
-    font-size: 12px;
-}
-
-/* Rule Form */
-.rule-form, .rule-edit-form {
-    background: var(--color-input-bg);
-    padding: 16px;
-    border-radius: var(--radius-md);
-    margin-bottom: 16px;
-}
-
-.rule-form h4 {
-    margin-bottom: 12px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 2fr 2fr 1fr;
-    gap: 12px;
-    align-items: end;
-}
-
-.form-row .form-group {
-    margin-bottom: 0;
-}
-
-.form-row .form-group label {
-    font-size: 12px;
-    margin-bottom: 4px;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 12px;
 }
 
 /* Budget Progress */
@@ -548,6 +492,10 @@ input:focus, select:focus {
 
 /* Review List */
 .review-item {
+    display: grid;
+    grid-template-columns: 1fr auto 150px;
+    gap: 16px;
+    align-items: center;
     padding: 12px;
     border-bottom: 1px solid var(--color-border);
 }
@@ -556,22 +504,8 @@ input:focus, select:focus {
     border-bottom: none;
 }
 
-.review-item-main {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 16px;
-    align-items: center;
-}
-
-.review-item-info {
-    min-width: 0;
-}
-
 .review-description {
     font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .review-details {
@@ -582,59 +516,6 @@ input:focus, select:focus {
 .review-amount {
     font-weight: 600;
     text-align: right;
-    white-space: nowrap;
-}
-
-.review-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.review-category {
-    width: 180px;
-}
-
-.create-rule-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.create-rule-label input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-}
-
-.rule-pattern-input {
-    margin-top: 12px;
-    padding: 12px;
-    background: var(--color-input-bg);
-    border-radius: var(--radius-md);
-}
-
-.rule-pattern-input label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.rule-pattern-input input {
-    flex: 1;
-    max-width: 400px;
-}
-
-.pattern-hint {
-    display: block;
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    margin-top: 6px;
 }
 
 /* Loading */
@@ -740,18 +621,9 @@ input:focus, select:focus {
         padding: 16px;
     }
 
-    .review-item-main {
+    .review-item {
         grid-template-columns: 1fr;
         gap: 8px;
-    }
-
-    .review-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .review-category {
-        width: 100%;
     }
 }
 

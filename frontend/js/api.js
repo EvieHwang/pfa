@@ -28,14 +28,10 @@ const API = {
 
     /**
      * Make an API request
-     * @param {string} path - API path
-     * @param {object} options - fetch options plus skipAuthRedirect flag
      */
     async request(path, options = {}) {
         const url = this.baseUrl + path;
         const token = this.getToken();
-        const skipAuthRedirect = options.skipAuthRedirect;
-        delete options.skipAuthRedirect;
 
         const headers = {
             'Content-Type': 'application/json',
@@ -52,8 +48,8 @@ const API = {
                 headers
             });
 
-            // Handle 401 - redirect to login (unless skipAuthRedirect is set)
-            if (response.status === 401 && !skipAuthRedirect) {
+            // Handle 401 - redirect to login
+            if (response.status === 401) {
                 this.clearToken();
                 window.location.reload();
                 return null;
@@ -148,12 +144,7 @@ const API = {
     // Auth endpoints
     auth: {
         async login(password) {
-            // Use skipAuthRedirect so 401 (wrong password) doesn't reload the page
-            return API.request('/auth/login', {
-                method: 'POST',
-                body: JSON.stringify({ password }),
-                skipAuthRedirect: true
-            });
+            return API.post('/auth/login', { password });
         },
 
         async verify() {
