@@ -14,7 +14,7 @@ Globals:
       Variables:
         SECRET_NAME: pfa/prod
         AWS_REGION_NAME: us-east-1
-        TRACE_BUCKET: !Ref TraceBucket
+        DATA_BUCKET: !Ref DataBucket
 
 Parameters:
   Environment:
@@ -68,8 +68,8 @@ Resources:
                 - s3:PutObject
                 - s3:ListBucket
               Resource:
-                - !GetAtt TraceBucket.Arn
-                - !Sub "${TraceBucket.Arn}/*"
+                - !GetAtt DataBucket.Arn
+                - !Sub "${DataBucket.Arn}/*"
       Events:
         HealthCheck:
           Type: Api
@@ -90,21 +90,17 @@ Resources:
             Method: ANY
             RestApiId: !Ref ApiGateway
 
-  # S3 Bucket for Traces
-  TraceBucket:
+  # S3 Bucket for SQLite Database
+  DataBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "pfa-traces-${Environment}"
+      BucketName: !Sub "pfa-data-${Environment}"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldTraces
-            Status: Enabled
-            ExpirationInDays: 30
-            Prefix: traces/
+      VersioningConfiguration:
+        Status: Enabled
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -118,7 +114,7 @@ Resources:
       Name: !Sub "pfa-api-${Environment}"
       StageName: !Ref Environment
       Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
 
@@ -172,6 +168,12 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: ""
             OriginAccessControlId: !Ref CloudFrontOAC
+          - Id: ApiOrigin
+            DomainName: !Sub "${ApiGateway}.execute-api.us-east-1.amazonaws.com"
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+            OriginPath: !Sub "/${Environment}"
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
@@ -187,6 +189,31 @@ Resources:
             Cookies:
               Forward: none
           Compress: true
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - Authorization
+                - Content-Type
+              Cookies:
+                Forward: none
+            DefaultTTL: 0
+            MinTTL: 0
+            MaxTTL: 0
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 200
@@ -231,13 +258,13 @@ Outputs:
     Description: "Lambda Function Name"
     Value: !Ref ApiFunction
 
-  TraceBucketName:
-    Description: "S3 Bucket for Traces"
-    Value: !Ref TraceBucket
+  DataBucketName:
+    Description: "S3 Bucket for SQLite Database"
+    Value: !Ref DataBucket
 
-  TraceBucketArn:
-    Description: "S3 Bucket ARN for Traces"
-    Value: !GetAtt TraceBucket.Arn
+  DataBucketArn:
+    Description: "S3 Bucket ARN for Database"
+    Value: !GetAtt DataBucket.Arn
 
   FrontendBucketName:
     Description: "S3 Bucket for Frontend"

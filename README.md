@@ -1,94 +1,82 @@
-# pfa
+# PFA - Personal Finance Awareness
 
-Personal finance app for tracking spending, budgets, and financial goals
+A single-user personal finance tracking app for managing Bank of America transactions, categorization, and budgets.
+
+**Live URL**: https://pfa.evehwang.com
 
 [![CI](https://github.com/EvieHwang/pfa/actions/workflows/ci.yml/badge.svg)](https://github.com/EvieHwang/pfa/actions/workflows/ci.yml)
 [![Deploy](https://github.com/EvieHwang/pfa/actions/workflows/deploy.yml/badge.svg)](https://github.com/EvieHwang/pfa/actions/workflows/deploy.yml)
 
-## Development Workflow
-
-This template is optimized for **cloud-based development** using Claude Code (CITA). Local development is optional.
-
-### Cloud Workflow (Primary)
-
-1. Open Claude Code on iOS/web, select your repo
-2. Describe a feature or ask for changes
-3. Claude Code creates a branch, implements, and opens a PR
-4. CI runs automatically on the PR
-5. Review and merge the PR in the GitHub app
-6. Deploy runs automatically on merge to `main`
-
-### Local Development (Optional)
-
-If you need to run locally for debugging:
-
-```bash
-# Install dependencies
-make install
-
-# Run frontend dev server
-make dev
-
-# Run backend locally (requires SAM CLI)
-make local
-
-# Run tests
-make test
-
-# Run linter
-make lint
-```
-
----
-
 ## Features
 
-- [ ] Feature 1
-- [ ] Feature 2
+- **CSV Upload**: Import Bank of America transaction exports (credit card and checking/savings formats)
+- **Auto-Categorization**: Rule-based categorization with priority matching
+- **Transaction Management**: Browse, search, filter, and manually categorize transactions
+- **Review Queue**: Flag uncategorized transactions for manual review
+- **Dashboard**: Summary cards, spending by category chart, and income/expense trends
+- **Budget Tracking**: Set monthly budgets by category and track progress
+- **Data Export**: Download transactions as CSV
+
+## Usage
+
+1. Visit https://pfa.evehwang.com
+2. Log in with the password
+3. Click "Upload CSV" to import Bank of America transaction exports
+4. Review and categorize flagged transactions
+5. View spending patterns on the dashboard
+6. Set budgets in Settings > Budgets
+
+### Supported CSV Formats
+
+**Credit Card Format**:
+```
+Posted Date,Reference Number,Payee,Address,Amount
+01/15/2026,12345678,AMAZON PRIME,SEATTLE WA,-49.99
+```
+
+**Checking/Savings Format**:
+```
+Date,Description,Amount,Running Bal.
+01/15/2026,DIRECT DEPOSIT ACME CORP,3500.00,15234.56
+```
 
 ## Tech Stack
 
-- **Backend**: Python 3.12, AWS Lambda, API Gateway
-- **Frontend**: React 18, TypeScript, Tailwind CSS, shadcn/ui
-- **Infrastructure**: AWS SAM, CloudFront, S3
-- **AI**: Claude API (Anthropic)
+- **Backend**: Python 3.12, AWS Lambda, SQLite (stored in S3)
+- **Frontend**: Vanilla JavaScript, Chart.js, Tabulator.js
+- **Infrastructure**: AWS SAM, CloudFront, S3, Secrets Manager
+- **Authentication**: JWT tokens with bcrypt password hashing
 - **CI/CD**: GitHub Actions
 
 ## Project Structure
 
 ```
 pfa/
-├── .github/
-│   ├── dependabot.yml          # Automated dependency updates
-│   ├── pull_request_template.md
-│   └── workflows/
-│       ├── ci.yml              # Lint, test, security scan
-│       ├── deploy.yml          # SAM deploy + frontend to S3
-│       └── rollback.yml        # One-click rollback
 ├── backend/
 │   ├── src/
-│   │   ├── handler.py          # Lambda handler
-│   │   └── utils/
-│   │       └── secrets.py      # Secrets Manager helper
-│   ├── tests/
+│   │   ├── handler.py          # Lambda entry point with routing
+│   │   ├── auth.py             # JWT authentication
+│   │   ├── database.py         # SQLite + S3 sync
+│   │   ├── csv_parser.py       # Bank of America CSV parsing
+│   │   ├── categorization.py   # Auto-categorization engine
+│   │   ├── models.py           # Data models
+│   │   ├── schema.sql          # Database schema + seed data
+│   │   └── routes/             # API route handlers
 │   └── requirements.txt
 ├── frontend/
-│   ├── src/
-│   │   ├── components/         # React components
-│   │   │   ├── ui/            # shadcn/ui components
-│   │   │   ├── ThemeProvider.tsx
-│   │   │   └── ThemeToggle.tsx
-│   │   └── lib/utils.ts       # Tailwind utilities
-│   ├── DESIGN.md              # Design system docs
-│   └── ...config files
+│   ├── index.html              # Main SPA
+│   ├── css/styles.css          # Styles
+│   └── js/
+│       ├── api.js              # API client
+│       ├── auth.js             # Login handling
+│       ├── app.js              # Main app controller
+│       ├── dashboard.js        # Charts and summary
+│       ├── transactions.js     # Transaction table
+│       └── upload.js           # CSV upload
 ├── specs/
-│   ├── CONSTITUTION.md        # Project principles
-│   └── 000-example-feature/   # Spec template
-├── .env.example               # Required environment variables
-├── CLAUDE.md                  # AI agent instructions
-├── Makefile                   # Common commands
-├── pyproject.toml             # Python config
-└── template.yaml              # SAM template
+│   └── 002-pfa-core/           # Feature specification
+├── CLAUDE.md                   # AI agent instructions
+└── template.yaml               # SAM template
 ```
 
 ## Deployment
