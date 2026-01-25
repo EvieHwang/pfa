@@ -266,7 +266,7 @@ When updating README.md:
 Key style rules enforced by ruff:
 - **Import sorting**: Use `isort` style (stdlib first, then third-party, then local)
 - **Modern type hints**: Use `tuple` instead of `typing.Tuple`, `X | None` instead of `Optional[X]`
-- **No bare except**: Always catch specific exceptions (e.g., `except ValueError:` not `except:`)
+- **No bare except**: Always catch specific exceptions (e.g., `except (ValueError, TypeError):` not `except:`)
 - **No unused variables**: Prefix unused loop variables with underscore (e.g., `_unused`)
 - **Explicit zip strict**: Use `zip(a, b, strict=False)` or `strict=True`
 
@@ -276,7 +276,17 @@ Example of correct modern Python:
 def process(data: dict) -> list[str] | None:
     ...
 
-# Bad - deprecated
+# Good - unused loop variables
+for _index, value in enumerate(items):
+    print(value)
+
+# Good - specific exceptions
+try:
+    data = json.loads(body)
+except (json.JSONDecodeError, ValueError, TypeError):
+    return error_response(400, "Invalid JSON")
+
+# Bad - deprecated typing
 from typing import Dict, List, Optional
 def process(data: Dict) -> Optional[List[str]]:
     ...
@@ -284,10 +294,29 @@ def process(data: Dict) -> Optional[List[str]]:
 
 ### Pre-Commit Checklist
 
-Before committing and pushing, always:
+**CRITICAL: Run these before every commit to avoid CI failures:**
+
 1. Run `ruff check backend/src/ --fix` to auto-fix linting issues
 2. Run `ruff check backend/src/` to verify no remaining issues
-3. Run tests if available: `pytest backend/tests/`
+3. If tests exist, run `pytest backend/tests/ -v` to verify they pass
+4. If you modified handler.py or routes, ensure tests still import correctly
+
+### Test Maintenance
+
+**When refactoring code, always update corresponding tests:**
+
+- If you remove or rename a function, update test imports
+- If you change function signatures, update test calls
+- Tests import from `src.*` - ensure these paths remain valid
+- Run tests locally before pushing when possible
+
+Example issue to avoid:
+```python
+# If you remove health_check() function from handler.py,
+# also remove it from test imports:
+# BAD: from src.handler import health_check, lambda_handler
+# GOOD: from src.handler import lambda_handler
+```
 
 ### SAM Deployment
 
@@ -306,13 +335,63 @@ sam deploy \
 - CloudFormation queries
 - GitHub Actions workflows
 
+**Never use a different stack name** (e.g., `pfa-stack`) as this creates orphaned resources.
+
 ### Frontend Types
 
 This project supports two frontend types:
-1. **Build-based** (React/Vite): Has `package.json` with `"build"` script, deploys from `dist/`
-2. **Static** (Vanilla JS): No build step, deploys files directly from `frontend/`
 
-The CI/CD workflows auto-detect which type and handle appropriately.
+1. **Build-based** (React/Vite):
+   - Has `package.json` with `"build"` script AND `package-lock.json`
+   - Deploys from `dist/` after npm build
+
+2. **Static** (Vanilla JS):
+   - No build step needed
+   - Deploys files directly from `frontend/`
+   - May have `package.json` but no `package-lock.json`
+
+**Important**: CI/CD workflows detect build-based frontends by checking for BOTH:
+- `package.json` with a `"build"` script
+- `package-lock.json` file
+
+If you have a static frontend with a leftover `package.json` (from template), the workflow will correctly skip the build step as long as there's no `package-lock.json`.
+
+## CI/CD Workflow Guidelines
+
+### Workflow Debugging
+
+When CI/CD fails:
+1. Run `gh run view <run-id> --log-failed` to see error details
+2. Check if it's a code issue (linting, tests) or infrastructure issue (permissions)
+3. For permission errors, check AWS IAM policies for the `github-actions-wm2` user
+
+### Required AWS Permissions
+
+The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
+- `cloudformation:CreateChangeSet`
+- `cloudformation:CreateStack`
+- `cloudformation:DeleteChangeSet`
+- `cloudformation:DescribeChangeSet`
+- `cloudformation:DescribeStackEvents`
+- `cloudformation:DescribeStacks`
+- `cloudformation:ExecuteChangeSet`
+- `cloudformation:GetTemplate`
+- `cloudformation:GetTemplateSummary`
+- `cloudformation:ListStackResources`
+- `cloudformation:UpdateStack`
+- `cloudformation:ValidateTemplate`
+
+### Common CI Failures and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Import sorting errors | Imports not in isort order | Run `ruff check --fix` |
+| `typing.Tuple` deprecated | Using old type hints | Use `tuple` instead |
+| Bare `except:` | Missing exception types | Use `except (TypeError, ValueError):` |
+| Test import error | Function was removed/renamed | Update test imports |
+| npm cache error | No package-lock.json | Ensure workflow checks for lock file |
+| SAM S3 bucket error | Missing --resolve-s3 | Add flag to sam deploy |
+| CloudFormation AccessDenied | Missing IAM permissions | Add required permissions to user |
 
 ## Active Technologies
 
