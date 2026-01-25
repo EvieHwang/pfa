@@ -119,6 +119,51 @@ After pushing a feature branch, always create the PR using `gh pr create`. Do no
 - **Move/rename files**: Reorganize project structure as needed
 - **Create directories**: Add new folders for organizational purposes
 
+## Environment-Specific Workflows
+
+Claude operates in two environments with different capabilities. Detect and adapt accordingly.
+
+### Environment Detection
+
+Check for `gh` CLI availability at session start:
+
+```bash
+command -v gh >/dev/null 2>&1 && echo "CLI environment" || echo "App environment"
+```
+
+### CLI Environment (Local Terminal)
+
+Full GitHub integration available:
+- Use `gh pr create` to open PRs programmatically
+- Use `gh issue`, `gh pr list`, `gh run view` for GitHub operations
+- Switch branches freely within a session
+- Follow the standard PR workflow in "Pull Request Process" above
+
+### App Environment (Cloud Container)
+
+Limited GitHub access (no `gh` CLI):
+- **Single branch per session**: Work on the assigned branch; it persists/recreates if deleted while session is active
+- **No programmatic PR creation**: Cannot use `gh` commands
+- **Manual PR handoff**: After pushing, provide the user with:
+  - Branch name
+  - Suggested PR title
+  - PR description/summary of changes
+- **User creates PR manually** via GitHub web or mobile app
+- **Optimize commits**: Group changes into logical, reviewable units since manual PR creation adds friction
+
+**App environment PR handoff template:**
+
+```
+Branch pushed: feature/my-feature
+Suggested PR title: Add feature X
+Description:
+- Implemented X
+- Updated Y
+- Tests added for Z
+
+Ready for you to create the PR at: https://github.com/OWNER/REPO/compare/main...feature/my-feature
+```
+
 ## Operations Requiring Approval
 
 Always ask before performing these operations:
