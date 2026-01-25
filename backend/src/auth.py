@@ -1,13 +1,13 @@
 """Authentication module for PFA - handles JWT and password validation."""
 
-import os
 import json
-import jwt
+import logging
+import os
+from datetime import datetime, timedelta
+
 import bcrypt
 import boto3
-from datetime import datetime, timedelta
-from typing import Optional, Tuple
-import logging
+import jwt
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ TOKEN_EXPIRY_HOURS = 24
 JWT_ALGORITHM = "HS256"
 
 # Cached secrets
-_secrets_cache: Optional[dict] = None
+_secrets_cache: dict | None = None
 
 
 def get_secrets() -> dict:
@@ -70,7 +70,7 @@ def validate_password(password: str) -> bool:
         return False
 
 
-def create_token() -> Tuple[str, datetime]:
+def create_token() -> tuple[str, datetime]:
     """Create a new JWT token."""
     secret = get_jwt_secret()
     if not secret:
@@ -88,7 +88,7 @@ def create_token() -> Tuple[str, datetime]:
     return token, expires_at
 
 
-def verify_token(token: str) -> Tuple[bool, Optional[datetime]]:
+def verify_token(token: str) -> tuple[bool, datetime | None]:
     """Verify a JWT token.
 
     Returns:
@@ -111,7 +111,7 @@ def verify_token(token: str) -> Tuple[bool, Optional[datetime]]:
         return False, None
 
 
-def extract_token_from_header(authorization: str) -> Optional[str]:
+def extract_token_from_header(authorization: str) -> str | None:
     """Extract JWT token from Authorization header.
 
     Expected format: "Bearer <token>"

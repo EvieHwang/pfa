@@ -1,10 +1,9 @@
 """Data models for PFA application."""
 
-from dataclasses import dataclass, field
-from datetime import datetime, date
-from typing import Optional
-from decimal import Decimal
 import uuid
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from decimal import Decimal
 
 
 @dataclass
@@ -38,8 +37,8 @@ class Category:
     id: int
     name: str
     category_type: str  # "income", "expense", "transfer"
-    parent_id: Optional[int] = None
-    parent_name: Optional[str] = None
+    parent_id: int | None = None
+    parent_name: str | None = None
     display_order: int = 0
     created_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -75,16 +74,16 @@ class Transaction:
     description: str
     amount: Decimal
     hash: str
-    category_id: Optional[int] = None
+    category_id: int | None = None
     needs_review: bool = True
-    raw_data: Optional[str] = None
+    raw_data: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     # Joined fields
-    account_name: Optional[str] = None
-    account_type: Optional[str] = None
-    category_name: Optional[str] = None
-    category_type: Optional[str] = None
-    parent_category_name: Optional[str] = None
+    account_name: str | None = None
+    account_type: str | None = None
+    category_name: str | None = None
+    category_type: str | None = None
+    parent_category_name: str | None = None
 
     @staticmethod
     def generate_id() -> str:
@@ -147,10 +146,10 @@ class CategorizationRule:
     pattern: str
     category_id: int
     priority: int = 100
-    account_filter: Optional[str] = None
+    account_filter: str | None = None
     is_active: bool = True
     created_at: datetime = field(default_factory=datetime.utcnow)
-    category_name: Optional[str] = None
+    category_name: str | None = None
 
     @classmethod
     def from_row(cls, row: tuple) -> "CategorizationRule":
@@ -185,10 +184,10 @@ class Budget:
     monthly_amount: Decimal
     effective_date: date
     created_at: datetime = field(default_factory=datetime.utcnow)
-    category_name: Optional[str] = None
-    actual_spent: Optional[Decimal] = None
-    remaining: Optional[Decimal] = None
-    percent_used: Optional[float] = None
+    category_name: str | None = None
+    actual_spent: Decimal | None = None
+    remaining: Decimal | None = None
+    percent_used: float | None = None
 
     @classmethod
     def from_row(cls, row: tuple) -> "Budget":

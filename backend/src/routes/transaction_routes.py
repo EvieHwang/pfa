@@ -3,11 +3,12 @@
 import base64
 import json
 import uuid
-from ..handler import route, json_response, error_response, parse_body, get_query_params
+
 from .. import database
-from ..models import Transaction
-from ..csv_parser import parse_csv
 from ..categorization import categorize_transaction, get_active_rules
+from ..csv_parser import parse_csv
+from ..handler import error_response, get_query_params, json_response, parse_body, route
+from ..models import Transaction
 
 
 @route("/transactions", method="GET")
@@ -143,7 +144,7 @@ def upload_transactions(event):
             file_content = json_body.get("file_content")
             if is_base64 and file_content:
                 file_content = base64.b64decode(file_content).decode("utf-8")
-        except:
+        except (json.JSONDecodeError, ValueError, TypeError):
             return error_response(400, "Invalid request body", "BAD_REQUEST")
 
     if not account_id:

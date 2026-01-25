@@ -257,6 +257,63 @@ When updating README.md:
 - Update usage instructions if UI/workflow changed
 - Commit the README update as part of the feature commit or immediately after
 
+## Code Quality Requirements
+
+### Python Code Style
+
+**ALWAYS run `ruff check backend/src/ --fix` before committing Python code.** This ensures CI will pass.
+
+Key style rules enforced by ruff:
+- **Import sorting**: Use `isort` style (stdlib first, then third-party, then local)
+- **Modern type hints**: Use `tuple` instead of `typing.Tuple`, `X | None` instead of `Optional[X]`
+- **No bare except**: Always catch specific exceptions (e.g., `except ValueError:` not `except:`)
+- **No unused variables**: Prefix unused loop variables with underscore (e.g., `_unused`)
+- **Explicit zip strict**: Use `zip(a, b, strict=False)` or `strict=True`
+
+Example of correct modern Python:
+```python
+# Good - modern type hints
+def process(data: dict) -> list[str] | None:
+    ...
+
+# Bad - deprecated
+from typing import Dict, List, Optional
+def process(data: Dict) -> Optional[List[str]]:
+    ...
+```
+
+### Pre-Commit Checklist
+
+Before committing and pushing, always:
+1. Run `ruff check backend/src/ --fix` to auto-fix linting issues
+2. Run `ruff check backend/src/` to verify no remaining issues
+3. Run tests if available: `pytest backend/tests/`
+
+### SAM Deployment
+
+**Always use `--resolve-s3` flag** when deploying with SAM to auto-create the deployment bucket:
+
+```bash
+sam deploy \
+  --stack-name pfa \
+  --capabilities CAPABILITY_IAM \
+  --resolve-s3 \
+  --parameter-overrides DomainName=pfa.evehwang.com
+```
+
+**Use consistent stack naming**: The stack name is `pfa` (matching the repo name). Always use this name in:
+- `sam deploy --stack-name pfa`
+- CloudFormation queries
+- GitHub Actions workflows
+
+### Frontend Types
+
+This project supports two frontend types:
+1. **Build-based** (React/Vite): Has `package.json` with `"build"` script, deploys from `dist/`
+2. **Static** (Vanilla JS): No build step, deploys files directly from `frontend/`
+
+The CI/CD workflows auto-detect which type and handle appropriately.
+
 ## Active Technologies
 
 - Python 3.12+ (Lambda runtime)

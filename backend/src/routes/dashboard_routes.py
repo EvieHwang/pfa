@@ -1,8 +1,9 @@
 """Dashboard routes for PFA API."""
 
 from datetime import date, timedelta
-from ..handler import route, json_response, get_query_params
+
 from .. import database
+from ..handler import get_query_params, json_response, route
 from ..models import Transaction
 
 
@@ -44,12 +45,6 @@ def get_dashboard(event):
         f"""SELECT COALESCE(SUM(amount), 0) FROM transactions t
             WHERE date BETWEEN ? AND ? {account_filter}""",
         (start_date, end_date) + tuple(account_params)
-    )[0]
-
-    prior_change = database.fetch_one(
-        f"""SELECT COALESCE(SUM(amount), 0) FROM transactions t
-            WHERE date BETWEEN ? AND ? {account_filter}""",
-        (prior_start, prior_end) + tuple(account_params)
     )[0]
 
     # Monthly spending (expenses only, negative amounts)

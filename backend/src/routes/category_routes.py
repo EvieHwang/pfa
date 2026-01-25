@@ -1,7 +1,7 @@
 """Category routes for PFA API."""
 
-from ..handler import route, json_response, error_response, parse_body
 from .. import database
+from ..handler import error_response, json_response, parse_body, route
 from ..models import Category
 
 

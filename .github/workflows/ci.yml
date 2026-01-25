@@ -88,21 +88,23 @@ jobs:
   frontend-lint:
     name: Frontend Lint & Build
     runs-on: ubuntu-latest
-    # Only run if frontend directory exists
+    # Only run if frontend directory exists with a build-based setup
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check if frontend exists
+      - name: Check if frontend needs build
         id: check_frontend
         run: |
-          if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+          # Check if this is a build-based frontend (has package.json with build script)
+          if [ -d "frontend" ] && [ -f "frontend/package.json" ] && grep -q '"build"' frontend/package.json; then
+            echo "needs_build=true" >> $GITHUB_OUTPUT
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "needs_build=false" >> $GITHUB_OUTPUT
+            echo "Static frontend or no build script - skipping build step"
           fi
 
       - name: Setup Node.js
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.needs_build == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -110,17 +112,17 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.needs_build == 'true'
         working-directory: frontend
         run: npm ci
 
       - name: Run TypeScript check
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.needs_build == 'true'
         working-directory: frontend
         run: npm run typecheck || true
 
       - name: Build frontend
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.needs_build == 'true'
         working-directory: frontend
         run: npm run build
 

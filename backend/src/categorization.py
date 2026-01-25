@@ -1,10 +1,10 @@
 """Categorization engine for automatic transaction categorization."""
 
-from typing import Optional, List, Tuple
+
 from . import database
 
 
-def get_active_rules() -> List[Tuple]:
+def get_active_rules() -> list[tuple]:
     """Get all active categorization rules ordered by priority.
 
     Returns:
@@ -22,8 +22,8 @@ def get_active_rules() -> List[Tuple]:
 def categorize_transaction(
     description: str,
     account_id: str = None,
-    rules: List[Tuple] = None
-) -> Optional[int]:
+    rules: list[tuple] = None
+) -> int | None:
     """Categorize a transaction based on description.
 
     Applies rules in priority order. First match wins.
@@ -45,7 +45,7 @@ def categorize_transaction(
     # Normalize description for matching
     description_upper = description.upper()
 
-    for rule_id, pattern, category_id, priority, account_filter in rules:
+    for _rule_id, pattern, category_id, _priority, account_filter in rules:
         # Check account filter
         if account_filter and account_id and account_filter != account_id:
             continue
@@ -58,9 +58,9 @@ def categorize_transaction(
 
 
 def categorize_transactions_batch(
-    transactions: List[dict],
+    transactions: list[dict],
     account_id: str = None
-) -> List[dict]:
+) -> list[dict]:
     """Categorize multiple transactions.
 
     Args:

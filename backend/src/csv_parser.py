@@ -4,10 +4,9 @@ import csv
 import hashlib
 import io
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Tuple, Optional
-from dataclasses import dataclass
 
 
 @dataclass
@@ -18,7 +17,7 @@ class ParsedTransaction:
     amount: Decimal
     hash: str
     raw_data: str
-    reference_number: Optional[str] = None
+    reference_number: str | None = None
 
 
 class CSVFormat:
@@ -50,7 +49,7 @@ def detect_format(header_row: str) -> str:
         return CSVFormat.CHECKING
 
 
-def parse_amount(amount_str: str) -> Optional[Decimal]:
+def parse_amount(amount_str: str) -> Decimal | None:
     """Parse amount string, handling commas and quotes.
 
     Args:
@@ -124,7 +123,7 @@ def generate_hash_checking(date: str, amount: str, description: str) -> str:
     return hashlib.sha256(data.encode()).hexdigest()[:32]
 
 
-def parse_credit_card_csv(content: str) -> Tuple[List[ParsedTransaction], List[str]]:
+def parse_credit_card_csv(content: str) -> tuple[list[ParsedTransaction], list[str]]:
     """Parse Format A (Credit Card) CSV.
 
     Columns: Posted Date, Reference Number, Payee, Address, Amount
@@ -186,7 +185,7 @@ def parse_credit_card_csv(content: str) -> Tuple[List[ParsedTransaction], List[s
     return transactions, errors
 
 
-def parse_checking_csv(content: str) -> Tuple[List[ParsedTransaction], List[str]]:
+def parse_checking_csv(content: str) -> tuple[list[ParsedTransaction], list[str]]:
     """Parse Format B (Checking/Savings) CSV.
 
     Has header section to skip, then: Date, Description, Amount, Running Bal.
@@ -268,7 +267,7 @@ def parse_checking_csv(content: str) -> Tuple[List[ParsedTransaction], List[str]
     return transactions, errors
 
 
-def parse_csv(content: str, account_type: str = None) -> Tuple[List[ParsedTransaction], List[str]]:
+def parse_csv(content: str, account_type: str = None) -> tuple[list[ParsedTransaction], list[str]]:
     """Parse CSV file content.
 
     Auto-detects format based on header row.

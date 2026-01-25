@@ -1,11 +1,11 @@
 """Database module for PFA - handles SQLite with S3 storage."""
 
+import logging
 import os
 import sqlite3
-import boto3
 from pathlib import Path
-from typing import Optional
-import logging
+
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ LOCAL_DB_PATH = "/tmp/pfa.db"
 DB_FILENAME = "pfa.db"
 
 # Global connection cache
-_connection: Optional[sqlite3.Connection] = None
+_connection: sqlite3.Connection | None = None
 _db_loaded = False
 
 
@@ -88,7 +88,7 @@ def get_connection() -> sqlite3.Connection:
     return _connection
 
 
-def init_schema(conn: Optional[sqlite3.Connection] = None) -> None:
+def init_schema(conn: sqlite3.Connection | None = None) -> None:
     """Initialize database schema from schema.sql."""
     if conn is None:
         conn = get_connection()
@@ -96,7 +96,7 @@ def init_schema(conn: Optional[sqlite3.Connection] = None) -> None:
     # Get schema file path
     schema_path = Path(__file__).parent / "schema.sql"
 
-    with open(schema_path, 'r') as f:
+    with open(schema_path) as f:
         schema_sql = f.read()
 
     # Execute schema
@@ -144,7 +144,7 @@ def commit() -> None:
     conn.commit()
 
 
-def fetch_one(query: str, params: tuple = ()) -> Optional[tuple]:
+def fetch_one(query: str, params: tuple = ()) -> tuple | None:
     """Execute query and fetch one result."""
     cursor = execute_query(query, params)
     return cursor.fetchone()

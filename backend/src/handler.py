@@ -3,18 +3,18 @@
 import json
 import logging
 import traceback
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
-from . import auth
-from . import database
+from . import auth, database
 
 # Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Route registry
-_routes: Dict[str, Dict[str, Callable]] = {}
+_routes: dict[str, dict[str, Callable]] = {}
 
 
 def route(path: str, method: str = "GET", requires_auth: bool = True):
@@ -36,7 +36,7 @@ def route(path: str, method: str = "GET", requires_auth: bool = True):
     return decorator
 
 
-def json_response(status_code: int, body: Any, headers: Optional[Dict] = None) -> Dict:
+def json_response(status_code: int, body: Any, headers: dict | None = None) -> dict:
     """Create a JSON API response."""
     response_headers = {
         "Content-Type": "application/json",
@@ -54,7 +54,7 @@ def json_response(status_code: int, body: Any, headers: Optional[Dict] = None) -
     }
 
 
-def error_response(status_code: int, message: str, code: str = None) -> Dict:
+def error_response(status_code: int, message: str, code: str = None) -> dict:
     """Create an error response."""
     body = {"error": message}
     if code:
@@ -62,7 +62,7 @@ def error_response(status_code: int, message: str, code: str = None) -> Dict:
     return json_response(status_code, body)
 
 
-def parse_body(event: Dict) -> Optional[Dict]:
+def parse_body(event: dict) -> dict | None:
     """Parse JSON body from event."""
     body = event.get("body")
     if not body:
@@ -74,17 +74,17 @@ def parse_body(event: Dict) -> Optional[Dict]:
         return None
 
 
-def get_path_params(event: Dict) -> Dict:
+def get_path_params(event: dict) -> dict:
     """Get path parameters from event."""
     return event.get("pathParameters") or {}
 
 
-def get_query_params(event: Dict) -> Dict:
+def get_query_params(event: dict) -> dict:
     """Get query string parameters from event."""
     return event.get("queryStringParameters") or {}
 
 
-def check_auth(event: Dict) -> bool:
+def check_auth(event: dict) -> bool:
     """Check if request is authenticated."""
     headers = event.get("headers") or {}
 
@@ -101,7 +101,7 @@ def check_auth(event: Dict) -> bool:
     return is_valid
 
 
-def lambda_handler(event: Dict, context: Any) -> Dict:
+def lambda_handler(event: dict, context: Any) -> dict:
     """Main Lambda entry point."""
     try:
         # Get request info
@@ -152,7 +152,7 @@ def lambda_handler(event: Dict, context: Any) -> Dict:
                     if len(route_parts) == len(path_parts):
                         match = True
                         params = {}
-                        for r_part, p_part in zip(route_parts, path_parts):
+                        for r_part, p_part in zip(route_parts, path_parts, strict=False):
                             if r_part.startswith("{") and r_part.endswith("}"):
                                 param_name = r_part[1:-1]
                                 params[param_name] = p_part
@@ -190,9 +190,3 @@ def lambda_handler(event: Dict, context: Any) -> Dict:
 
 
 # Import route modules to register routes
-from .routes import auth_routes
-from .routes import transaction_routes
-from .routes import category_routes
-from .routes import rule_routes
-from .routes import budget_routes
-from .routes import dashboard_routes

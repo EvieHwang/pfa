@@ -55,36 +55,37 @@ jobs:
         run: |
           DOMAIN_NAME="${{ github.event.repository.name }}.evehwang.com"
           sam deploy \
-            --stack-name pfa-stack \
+            --stack-name pfa \
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
+            --resolve-s3 \
             --parameter-overrides Environment=prod DomainName=$DOMAIN_NAME
 
       - name: Get Stack Outputs
         id: get_outputs
         run: |
           ENDPOINT=$(aws cloudformation describe-stacks \
-            --stack-name pfa-stack \
+            --stack-name pfa \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
             --output text)
           echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
           echo "API Endpoint: $ENDPOINT"
 
           FRONTEND_BUCKET=$(aws cloudformation describe-stacks \
-            --stack-name pfa-stack \
+            --stack-name pfa \
             --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' \
             --output text)
           echo "frontend_bucket=$FRONTEND_BUCKET" >> $GITHUB_OUTPUT
 
           CF_DISTRIBUTION=$(aws cloudformation describe-stacks \
-            --stack-name pfa-stack \
+            --stack-name pfa \
             --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
             --output text)
           echo "cf_distribution=$CF_DISTRIBUTION" >> $GITHUB_OUTPUT
 
           APP_URL=$(aws cloudformation describe-stacks \
-            --stack-name pfa-stack \
+            --stack-name pfa \
             --query 'Stacks[0].Outputs[?OutputKey==`AppUrl`].OutputValue' \
             --output text)
           echo "app_url=$APP_URL" >> $GITHUB_OUTPUT
@@ -122,15 +123,21 @@ jobs:
       - name: Check if frontend exists
         id: check_frontend
         run: |
-          if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+          if [ -d "frontend" ] && [ -f "frontend/index.html" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
+            # Check if this is a build-based frontend (has package.json with build script)
+            if [ -f "frontend/package.json" ] && grep -q '"build"' frontend/package.json; then
+              echo "needs_build=true" >> $GITHUB_OUTPUT
+            else
+              echo "needs_build=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "No frontend directory found, skipping frontend deployment"
           fi
 
       - name: Setup Node.js
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.exists == 'true' && steps.check_frontend.outputs.needs_build == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -138,12 +145,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.exists == 'true' && steps.check_frontend.outputs.needs_build == 'true'
         working-directory: frontend
         run: npm ci
 
       - name: Build frontend
-        if: steps.check_frontend.outputs.exists == 'true'
+        if: steps.check_frontend.outputs.exists == 'true' && steps.check_frontend.outputs.needs_build == 'true'
         working-directory: frontend
         run: npm run build
         env:
@@ -158,8 +165,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Sync to S3
-        if: steps.check_frontend.outputs.exists == 'true'
+      - name: Sync to S3 (built frontend)
+        if: steps.check_frontend.outputs.exists == 'true' && steps.check_frontend.outputs.needs_build == 'true'
         run: |
           aws s3 sync frontend/dist/ s3://${{ needs.deploy-backend.outputs.frontend_bucket }}/ \
             --delete \
@@ -168,6 +175,27 @@ jobs:
 
           # Upload index.html with no-cache
           aws s3 cp frontend/dist/index.html s3://${{ needs.deploy-backend.outputs.frontend_bucket }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Sync to S3 (static frontend)
+        if: steps.check_frontend.outputs.exists == 'true' && steps.check_frontend.outputs.needs_build == 'false'
+        run: |
+          aws s3 sync frontend/ s3://${{ needs.deploy-backend.outputs.frontend_bucket }}/ \
+            --delete \
+            --exclude "package.json" \
+            --exclude "package-lock.json" \
+            --exclude "node_modules/*" \
+            --exclude "*.ts" \
+            --exclude "*.tsx" \
+            --exclude "tsconfig*.json" \
+            --exclude "vite.config.*" \
+            --exclude "postcss.config.*" \
+            --exclude "tailwind.config.*" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+
+          # Upload index.html with no-cache
+          aws s3 cp frontend/index.html s3://${{ needs.deploy-backend.outputs.frontend_bucket }}/index.html \
             --cache-control "no-cache, no-store, must-revalidate"
 
       - name: Invalidate CloudFront
