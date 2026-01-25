@@ -85,9 +85,14 @@ chmod *
 ### Git Operations
 - **Create feature branches**: Create branches from main for all feature work
 - **Commit to branches**: Create commits with descriptive messages on feature branches
-- **Push to remote**: Push branches to GitHub remote repository
+- **Push to remote**: Push feature branches to GitHub remote repository
 - **Create PRs**: Open pull requests for all changes targeting main
 - **Do not merge PRs**: Leave PRs open for human review unless explicitly instructed
+- **Do not push to main**: All changes to main must go through approved PRs. Never push directly to main.
+
+### Pull Request Process
+
+After pushing a feature branch, always create the PR using `gh pr create`. Do not leave branches without an open PR. Confirm creation with `gh pr list`.
 
 ### Development and Deployment
 - **Run deployments**: Execute deployment scripts and commands (AWS SAM, etc.)
