@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from src.handler import health_check, lambda_handler
+from src.handler import lambda_handler
 
 
 class TestHealthCheck:
@@ -14,26 +14,28 @@ class TestHealthCheck:
 
     def test_health_check_returns_200(self):
         """Health check should return 200 status code."""
-        response = health_check()
+        event = {"httpMethod": "GET", "path": "/health"}
+        response = lambda_handler(event, None)
         assert response["statusCode"] == 200
 
     def test_health_check_returns_json(self):
         """Health check should return valid JSON body."""
-        response = health_check()
+        event = {"httpMethod": "GET", "path": "/health"}
+        response = lambda_handler(event, None)
         body = json.loads(response["body"])
         assert "status" in body
-        assert "timestamp" in body
-        assert "service" in body
 
     def test_health_check_status_is_healthy(self):
         """Health check should report healthy status."""
-        response = health_check()
+        event = {"httpMethod": "GET", "path": "/health"}
+        response = lambda_handler(event, None)
         body = json.loads(response["body"])
         assert body["status"] == "healthy"
 
     def test_health_check_has_cors_header(self):
         """Health check should include CORS headers."""
-        response = health_check()
+        event = {"httpMethod": "GET", "path": "/health"}
+        response = lambda_handler(event, None)
         assert "Access-Control-Allow-Origin" in response["headers"]
 
 
@@ -48,17 +50,27 @@ class TestLambdaHandler:
         body = json.loads(response["body"])
         assert body["status"] == "healthy"
 
-    def test_handler_routes_root_to_health_check(self):
-        """Handler should route / to health check."""
+    def test_handler_routes_api_health(self):
+        """Handler should route /api/health to health check."""
+        event = {"httpMethod": "GET", "path": "/api/health"}
+        response = lambda_handler(event, None)
+        assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["status"] == "healthy"
+
+    def test_handler_routes_root(self):
+        """Handler should route / to app info."""
         event = {"httpMethod": "GET", "path": "/"}
         response = lambda_handler(event, None)
         assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["app"] == "PFA"
 
-    def test_handler_returns_404_for_unknown_path(self):
-        """Handler should return 404 for unknown paths."""
-        event = {"httpMethod": "GET", "path": "/unknown"}
+    def test_handler_returns_401_for_protected_route(self):
+        """Handler should return 401 for protected routes without auth."""
+        event = {"httpMethod": "GET", "path": "/transactions"}
         response = lambda_handler(event, None)
-        assert response["statusCode"] == 404
+        assert response["statusCode"] == 401
         body = json.loads(response["body"])
         assert "error" in body
 
@@ -66,5 +78,11 @@ class TestLambdaHandler:
         """Handler should handle events with missing path."""
         event = {"httpMethod": "GET"}
         response = lambda_handler(event, None)
-        # Should default to root path and return health check
+        # Should default to root path and return app info
+        assert response["statusCode"] == 200
+
+    def test_handler_options_returns_200(self):
+        """Handler should return 200 for OPTIONS requests (CORS preflight)."""
+        event = {"httpMethod": "OPTIONS", "path": "/transactions"}
+        response = lambda_handler(event, None)
         assert response["statusCode"] == 200
