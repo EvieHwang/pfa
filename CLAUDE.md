@@ -393,9 +393,65 @@ The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
 | SAM S3 bucket error | Missing --resolve-s3 | Add flag to sam deploy |
 | CloudFormation AccessDenied | Missing IAM permissions | Add required permissions to user |
 
+## Post-Merge Deployment Monitoring
+
+**After any PR is approved and merged, always verify the deployment succeeded:**
+
+1. Wait 60 seconds for GitHub Actions to start
+2. Check workflow status: `gh run list --limit 5`
+3. If deploy shows `failure`:
+   - Investigate: `gh run view <run-id> --log-failed`
+   - Fix the issue immediately
+   - Document the root cause in the "Deployment Lessons Learned" section below
+4. If deploy shows `success`:
+   - Verify the app works: `curl -s https://pfa.evehwang.com/api/health`
+   - Spot-check any changed functionality
+
+**The goal is to never repeat the same deployment mistake twice.**
+
 ## Active Technologies
 
 - Python 3.12+ (Lambda runtime)
 - Claude API (Anthropic SDK) for AI features
 - AWS Lambda, API Gateway, S3, CloudFront
 - AWS SAM for deployment
+
+## Deployment Lessons Learned
+
+Document root causes of deployment failures here to prevent recurrence:
+
+### 2026-01-24: Python Linting Failures
+**Symptom**: CI failed on ruff linting checks
+**Root Cause**: Code used deprecated `typing.Tuple`, `typing.Optional`, bare `except:`, unsorted imports
+**Fix**: Always run `ruff check backend/src/ --fix` before committing
+**Prevention**: Added to Pre-Commit Checklist
+
+### 2026-01-24: SAM Deploy Missing S3 Bucket
+**Symptom**: Deploy failed with "S3 Bucket not specified"
+**Root Cause**: `sam deploy` command missing `--resolve-s3` flag
+**Fix**: Added `--resolve-s3` to deploy workflow
+**Prevention**: Documented in SAM Deployment section
+
+### 2026-01-24: Stack Name Mismatch
+**Symptom**: Deploy workflow couldn't find stack outputs
+**Root Cause**: Workflow used `pfa-stack` but manual deploy used `pfa`
+**Fix**: Standardized on `pfa` as the stack name
+**Prevention**: Added warning about consistent stack naming
+
+### 2026-01-24: Frontend npm Cache Error
+**Symptom**: Deploy failed with "unable to cache dependencies"
+**Root Cause**: Workflow tried to cache npm with `package-lock.json` that didn't exist (static frontend)
+**Fix**: Updated workflow to check for both `package.json` with build script AND `package-lock.json`
+**Prevention**: Documented frontend type detection requirements
+
+### 2026-01-24: Test Import Errors
+**Symptom**: Tests failed to import removed function
+**Root Cause**: Refactored `handler.py` but didn't update test imports
+**Fix**: Updated test file to match new handler structure
+**Prevention**: Added Test Maintenance section
+
+### 2026-01-24: AWS IAM Permission Denied
+**Symptom**: Deploy failed with CloudFormation AccessDenied errors
+**Root Cause**: GitHub Actions IAM user missing CloudFormation permissions
+**Fix**: Added comprehensive CloudFormation policy to user
+**Prevention**: Documented required permissions in CI/CD Workflow Guidelines
