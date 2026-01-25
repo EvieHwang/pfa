@@ -190,3 +190,11 @@ def lambda_handler(event: dict, context: Any) -> dict:
 
 
 # Import route modules to register routes
+from .routes import (  # noqa: F401, E402
+    auth_routes,
+    budget_routes,
+    category_routes,
+    dashboard_routes,
+    rule_routes,
+    transaction_routes,
+)
