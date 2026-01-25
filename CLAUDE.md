@@ -381,18 +381,6 @@ The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
 - `cloudformation:UpdateStack`
 - `cloudformation:ValidateTemplate`
 
-### Common CI Failures and Fixes
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| Import sorting errors | Imports not in isort order | Run `ruff check --fix` |
-| `typing.Tuple` deprecated | Using old type hints | Use `tuple` instead |
-| Bare `except:` | Missing exception types | Use `except (TypeError, ValueError):` |
-| Test import error | Function was removed/renamed | Update test imports |
-| npm cache error | No package-lock.json | Ensure workflow checks for lock file |
-| SAM S3 bucket error | Missing --resolve-s3 | Add flag to sam deploy |
-| CloudFormation AccessDenied | Missing IAM permissions | Add required permissions to user |
-
 ## Post-Merge Deployment Monitoring
 
 **After any PR is approved and merged, always verify the deployment succeeded:**
@@ -402,12 +390,9 @@ The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
 3. If deploy shows `failure`:
    - Investigate: `gh run view <run-id> --log-failed`
    - Fix the issue immediately
-   - Document the root cause in the "Deployment Lessons Learned" section below
+   - Add a one-line entry to the "Deployment Failure Log" below
 4. If deploy shows `success`:
    - Verify the app works: `curl -s https://pfa.evehwang.com/api/health`
-   - Spot-check any changed functionality
-
-**The goal is to never repeat the same deployment mistake twice.**
 
 ## Active Technologies
 
@@ -416,42 +401,23 @@ The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
 - AWS Lambda, API Gateway, S3, CloudFront
 - AWS SAM for deployment
 
-## Deployment Lessons Learned
+## Quick Reference: CI/CD Failure Fixes
 
-Document root causes of deployment failures here to prevent recurrence:
+When a deployment fails, find the error in this table and apply the fix:
 
-### 2026-01-24: Python Linting Failures
-**Symptom**: CI failed on ruff linting checks
-**Root Cause**: Code used deprecated `typing.Tuple`, `typing.Optional`, bare `except:`, unsorted imports
-**Fix**: Always run `ruff check backend/src/ --fix` before committing
-**Prevention**: Added to Pre-Commit Checklist
+| Error Pattern | Fix | Details In |
+|---------------|-----|------------|
+| Import sorting / `I001` | `ruff check backend/src/ --fix` | Pre-Commit Checklist |
+| `typing.Tuple` deprecated | Use `tuple` not `Tuple` | Python Code Style |
+| Bare `except:` | Use `except (TypeError, ValueError):` | Python Code Style |
+| Test import error | Update test imports after refactoring | Test Maintenance |
+| npm cache / package-lock | Workflow auto-detects; ensure no stale lock file | Frontend Types |
+| SAM S3 bucket error | Add `--resolve-s3` flag | SAM Deployment |
+| Stack name mismatch | Always use `pfa` as stack name | SAM Deployment |
+| CloudFormation AccessDenied | Add IAM permissions to github-actions user | Required AWS Permissions |
 
-### 2026-01-24: SAM Deploy Missing S3 Bucket
-**Symptom**: Deploy failed with "S3 Bucket not specified"
-**Root Cause**: `sam deploy` command missing `--resolve-s3` flag
-**Fix**: Added `--resolve-s3` to deploy workflow
-**Prevention**: Documented in SAM Deployment section
+## Deployment Failure Log
 
-### 2026-01-24: Stack Name Mismatch
-**Symptom**: Deploy workflow couldn't find stack outputs
-**Root Cause**: Workflow used `pfa-stack` but manual deploy used `pfa`
-**Fix**: Standardized on `pfa` as the stack name
-**Prevention**: Added warning about consistent stack naming
+One-line entries for historical tracking. Detailed fixes are in the sections referenced above.
 
-### 2026-01-24: Frontend npm Cache Error
-**Symptom**: Deploy failed with "unable to cache dependencies"
-**Root Cause**: Workflow tried to cache npm with `package-lock.json` that didn't exist (static frontend)
-**Fix**: Updated workflow to check for both `package.json` with build script AND `package-lock.json`
-**Prevention**: Documented frontend type detection requirements
-
-### 2026-01-24: Test Import Errors
-**Symptom**: Tests failed to import removed function
-**Root Cause**: Refactored `handler.py` but didn't update test imports
-**Fix**: Updated test file to match new handler structure
-**Prevention**: Added Test Maintenance section
-
-### 2026-01-24: AWS IAM Permission Denied
-**Symptom**: Deploy failed with CloudFormation AccessDenied errors
-**Root Cause**: GitHub Actions IAM user missing CloudFormation permissions
-**Fix**: Added comprehensive CloudFormation policy to user
-**Prevention**: Documented required permissions in CI/CD Workflow Guidelines
+- **2026-01-24**: Python linting (ruff), SAM --resolve-s3, stack name mismatch, npm cache error, test imports, IAM permissions
