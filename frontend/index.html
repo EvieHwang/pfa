@@ -231,10 +231,46 @@
                 <div id="categories-tab" class="tab-content hidden">
                     <div class="tab-header">
                         <h3>Categories</h3>
+                        <button class="btn btn-secondary" id="add-category-btn">Add Category</button>
                     </div>
                     <div id="categories-list"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Category Create/Edit Modal -->
+    <div id="category-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="category-modal-title">Create Category</h2>
+                <button class="modal-close" data-modal="category-modal">&times;</button>
+            </div>
+            <form id="category-form">
+                <div class="form-group">
+                    <label for="category-name">Name</label>
+                    <input type="text" id="category-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="category-type">Type</label>
+                    <select id="category-type" required>
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                        <option value="transfer">Transfer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="category-parent">Parent Category (optional)</label>
+                    <select id="category-parent">
+                        <option value="">None (top-level)</option>
+                    </select>
+                </div>
+                <input type="hidden" id="category-edit-id">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-modal="category-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
         </div>
     </div>
 

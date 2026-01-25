@@ -201,17 +201,54 @@ const Transactions = {
         // Populate category dropdown
         const select = document.getElementById('edit-category');
         select.innerHTML = '<option value="">Select category...</option>' +
+            '<option value="__create_new__">+ Create New...</option>' +
             this.categories.map(c =>
                 `<option value="${c.id}" ${c.id === transaction.category_id ? 'selected' : ''}>
                     ${c.parent_name ? c.parent_name + ' > ' : ''}${c.name}
                 </option>`
             ).join('');
 
+        // Setup listener for "+ Create New..."
+        select.onchange = (e) => {
+            if (e.target.value === '__create_new__') {
+                e.target.value = transaction.category_id || '';
+                App.showCategoryModal(null, (newCategory) => {
+                    this.handleNewCategoryCreated(newCategory, select);
+                });
+            }
+        };
+
         // Reset create rule checkbox
         document.getElementById('create-rule').checked = false;
 
         // Show modal
         document.getElementById('edit-modal').classList.remove('hidden');
+    },
+
+    /**
+     * Handle new category created from edit dropdown
+     */
+    handleNewCategoryCreated(newCategory, selectElement) {
+        // Add to local categories
+        this.categories.push(newCategory);
+
+        // Add option to dropdown
+        const newOption = document.createElement('option');
+        newOption.value = newCategory.id;
+        newOption.textContent = newCategory.parent_name
+            ? `${newCategory.parent_name} > ${newCategory.name}`
+            : newCategory.name;
+
+        // Insert after "+ Create New..."
+        const createNewOption = selectElement.querySelector('option[value="__create_new__"]');
+        if (createNewOption && createNewOption.nextSibling) {
+            selectElement.insertBefore(newOption, createNewOption.nextSibling);
+        } else {
+            selectElement.appendChild(newOption);
+        }
+
+        // Select the new category
+        selectElement.value = newCategory.id;
     },
 
     /**

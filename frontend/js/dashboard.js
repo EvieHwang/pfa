@@ -318,10 +318,16 @@ const Dashboard = {
     },
 
     /**
+     * Store categories for the review modal
+     */
+    reviewCategories: [],
+
+    /**
      * Render review list
      */
     renderReviewList(transactions, categories) {
         const container = document.getElementById('review-list');
+        this.reviewCategories = categories;
 
         const categoryOptions = categories.map(c =>
             `<option value="${c.id}">${c.parent_name ? c.parent_name + ' > ' : ''}${c.name}</option>`
@@ -341,6 +347,7 @@ const Dashboard = {
                     </div>
                     <select class="review-category" data-id="${t.id}">
                         <option value="">Select category...</option>
+                        <option value="__create_new__">+ Create New...</option>
                         ${categoryOptions}
                     </select>
                 </div>
@@ -376,8 +383,54 @@ const Dashboard = {
             });
         });
 
+        // Setup category dropdown listeners for "+ Create New..."
+        container.querySelectorAll('.review-category').forEach(select => {
+            select.addEventListener('change', (e) => {
+                if (e.target.value === '__create_new__') {
+                    // Reset selection while creating
+                    e.target.value = '';
+                    // Show category modal with callback
+                    App.showCategoryModal(null, (newCategory) => {
+                        this.handleNewCategoryCreated(newCategory, e.target);
+                    });
+                }
+            });
+        });
+
         // Setup save button
         document.getElementById('save-reviews').onclick = () => this.saveReviews();
+    },
+
+    /**
+     * Handle new category created from dropdown
+     */
+    handleNewCategoryCreated(newCategory, selectElement) {
+        // Add the new category to our local list
+        this.reviewCategories.push(newCategory);
+
+        // Update all dropdowns in the review modal
+        const allSelects = document.querySelectorAll('.review-category');
+        allSelects.forEach(select => {
+            // Add the new option before the existing options (after "+ Create New...")
+            const newOption = document.createElement('option');
+            newOption.value = newCategory.id;
+            newOption.textContent = newCategory.parent_name
+                ? `${newCategory.parent_name} > ${newCategory.name}`
+                : newCategory.name;
+
+            // Insert after the "+ Create New..." option
+            const createNewOption = select.querySelector('option[value="__create_new__"]');
+            if (createNewOption && createNewOption.nextSibling) {
+                select.insertBefore(newOption, createNewOption.nextSibling);
+            } else {
+                select.appendChild(newOption);
+            }
+        });
+
+        // Select the new category in the dropdown that triggered creation
+        if (selectElement) {
+            selectElement.value = newCategory.id;
+        }
     },
 
     /**

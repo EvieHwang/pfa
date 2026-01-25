@@ -512,25 +512,236 @@ const App = {
     },
 
     /**
-     * Load categories
+     * Store all categories (including inactive) for Settings
+     */
+    allCategories: [],
+
+    /**
+     * Load categories (with management UI)
      */
     async loadCategories() {
         try {
-            const result = await API.categories.list();
-            const categories = result.items || [];
+            // Fetch all categories including inactive for Settings
+            const result = await API.categories.list(true);
+            this.allCategories = result.items || [];
 
             const container = document.getElementById('categories-list');
-            container.innerHTML = categories.map(cat => `
-                <div class="category-item">
-                    <div>
-                        ${cat.parent_name ? '<span style="color: var(--color-text-secondary);">' + cat.parent_name + ' &gt; </span>' : ''}
-                        <span>${cat.name}</span>
-                        <span style="color: var(--color-text-secondary); font-size: 12px;"> (${cat.category_type})</span>
-                    </div>
-                </div>
-            `).join('');
+
+            // Separate top-level and subcategories, group by parent
+            const topLevel = this.allCategories.filter(c => !c.parent_id);
+            const byParent = {};
+            this.allCategories.forEach(c => {
+                if (c.parent_id) {
+                    if (!byParent[c.parent_id]) byParent[c.parent_id] = [];
+                    byParent[c.parent_id].push(c);
+                }
+            });
+
+            let html = '';
+            topLevel.forEach(parent => {
+                html += this.renderCategoryItem(parent, false);
+                const children = byParent[parent.id] || [];
+                children.forEach(child => {
+                    html += this.renderCategoryItem(child, true);
+                });
+            });
+
+            if (html === '') {
+                html = '<p style="color: var(--color-text-secondary); padding: 20px;">No categories. Click "Add Category" to create one.</p>';
+            }
+
+            container.innerHTML = html;
+
+            // Setup add category button handler
+            const addBtn = document.getElementById('add-category-btn');
+            if (addBtn) {
+                addBtn.onclick = () => this.showCategoryModal();
+            }
         } catch (error) {
             console.error('Failed to load categories:', error);
+        }
+    },
+
+    /**
+     * Render a single category item
+     */
+    renderCategoryItem(cat, isChild) {
+        const inactive = !cat.is_active;
+        const indentClass = isChild ? 'category-child' : '';
+        const inactiveClass = inactive ? 'category-inactive' : '';
+
+        return `
+            <div class="category-item ${indentClass} ${inactiveClass}" data-id="${cat.id}">
+                <div class="category-info">
+                    ${isChild ? '<span class="category-indent">└</span>' : ''}
+                    <span class="category-name">${this.escapeHtml(cat.name)}</span>
+                    <span class="category-type">(${cat.category_type})</span>
+                    ${inactive ? '<span class="category-badge inactive">inactive</span>' : ''}
+                </div>
+                <div class="category-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="App.editCategory(${cat.id})">Edit</button>
+                    ${inactive
+                        ? `<button class="btn btn-ghost btn-sm" onclick="App.toggleCategoryActive(${cat.id}, true)">Activate</button>`
+                        : `<button class="btn btn-ghost btn-sm btn-warning" onclick="App.toggleCategoryActive(${cat.id}, false)">Deactivate</button>`
+                    }
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Callback to invoke after category creation (for inline creation from dropdowns)
+     */
+    categoryCreatedCallback: null,
+
+    /**
+     * Show category create/edit modal
+     * @param {number|null} categoryId - ID to edit, or null for create mode
+     * @param {function|null} onCreated - Callback to invoke with new category after creation
+     */
+    async showCategoryModal(categoryId = null, onCreated = null) {
+        const modal = document.getElementById('category-modal');
+        const title = document.getElementById('category-modal-title');
+        const form = document.getElementById('category-form');
+        const nameInput = document.getElementById('category-name');
+        const typeSelect = document.getElementById('category-type');
+        const parentSelect = document.getElementById('category-parent');
+        const editIdInput = document.getElementById('category-edit-id');
+
+        // Store callback for after creation
+        this.categoryCreatedCallback = onCreated;
+
+        // Ensure we have categories loaded for parent dropdown
+        if (this.allCategories.length === 0) {
+            const result = await API.categories.list(true);
+            this.allCategories = result.items || [];
+        }
+
+        // Populate parent dropdown with active top-level categories
+        const topLevel = this.allCategories.filter(c => !c.parent_id && c.is_active);
+        parentSelect.innerHTML = '<option value="">None (top-level)</option>' +
+            topLevel.map(c => `<option value="${c.id}">${this.escapeHtml(c.name)}</option>`).join('');
+
+        if (categoryId) {
+            // Edit mode
+            const cat = this.allCategories.find(c => c.id === categoryId);
+            if (!cat) return;
+
+            title.textContent = 'Edit Category';
+            nameInput.value = cat.name;
+            typeSelect.value = cat.category_type;
+            parentSelect.value = cat.parent_id || '';
+            editIdInput.value = categoryId;
+        } else {
+            // Create mode
+            title.textContent = 'Create Category';
+            form.reset();
+            editIdInput.value = '';
+        }
+
+        modal.classList.remove('hidden');
+        nameInput.focus();
+
+        // Setup form submit handler (only once)
+        if (!form.dataset.listenerAdded) {
+            form.addEventListener('submit', (e) => this.handleCategorySubmit(e));
+            form.dataset.listenerAdded = 'true';
+        }
+    },
+
+    /**
+     * Handle category form submit
+     */
+    async handleCategorySubmit(e) {
+        e.preventDefault();
+
+        const nameInput = document.getElementById('category-name');
+        const typeSelect = document.getElementById('category-type');
+        const parentSelect = document.getElementById('category-parent');
+        const editIdInput = document.getElementById('category-edit-id');
+
+        const name = nameInput.value.trim();
+        const categoryType = typeSelect.value;
+        const parentId = parentSelect.value ? parseInt(parentSelect.value) : null;
+        const editId = editIdInput.value;
+
+        if (!name) {
+            this.showToast('Name is required', 'error');
+            return;
+        }
+
+        try {
+            let newCategory = null;
+
+            if (editId) {
+                // Update existing
+                newCategory = await API.categories.update(editId, {
+                    name,
+                    category_type: categoryType,
+                    parent_id: parentId
+                });
+                this.showToast('Category updated', 'success');
+            } else {
+                // Create new
+                newCategory = await API.categories.create({
+                    name,
+                    category_type: categoryType,
+                    parent_id: parentId
+                });
+                this.showToast('Category created', 'success');
+            }
+
+            document.getElementById('category-modal').classList.add('hidden');
+            this.loadCategories();
+
+            // Invoke callback if set (for inline creation)
+            if (this.categoryCreatedCallback && newCategory) {
+                this.categoryCreatedCallback(newCategory);
+                this.categoryCreatedCallback = null;
+            }
+        } catch (error) {
+            this.showToast('Failed to save category: ' + error.message, 'error');
+        }
+    },
+
+    /**
+     * Edit a category
+     */
+    editCategory(id) {
+        this.showCategoryModal(id);
+    },
+
+    /**
+     * Toggle category active status (deactivate/reactivate)
+     */
+    async toggleCategoryActive(id, activate) {
+        const cat = this.allCategories.find(c => c.id === id);
+        if (!cat) return;
+
+        if (!activate) {
+            // Deactivating - warn about consequences
+            const confirmed = confirm(
+                `Deactivate "${cat.name}"?\n\n` +
+                'This will:\n' +
+                '• Remove category from all current transactions\n' +
+                '• Send those transactions to the review queue\n' +
+                '• Hide category from dropdowns and budgets\n\n' +
+                'You can reactivate it later from Settings.'
+            );
+            if (!confirmed) return;
+        }
+
+        try {
+            await API.categories.update(id, { is_active: activate });
+            this.showToast(activate ? 'Category activated' : 'Category deactivated', 'success');
+            this.loadCategories();
+
+            // Refresh dashboard if deactivating (transactions moved to review)
+            if (!activate && typeof Dashboard !== 'undefined') {
+                Dashboard.loadData();
+            }
+        } catch (error) {
+            this.showToast('Failed to update category: ' + error.message, 'error');
         }
     },
 

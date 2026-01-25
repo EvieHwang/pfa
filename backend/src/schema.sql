@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS categories (
     category_type TEXT NOT NULL CHECK (category_type IN ('income', 'expense', 'transfer')),
     parent_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     display_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
