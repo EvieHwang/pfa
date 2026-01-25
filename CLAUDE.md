@@ -85,14 +85,15 @@ chmod *
 ### Git Operations
 - **Create feature branches**: Create branches from main for all feature work
 - **Commit to branches**: Create commits with descriptive messages on feature branches
-- **Push to remote**: Push branches to GitHub remote repository
+- **Push to remote**: Push feature branches to GitHub remote repository
 - **Create PRs**: Open pull requests for all changes targeting main
 - **Do not merge PRs**: Leave PRs open for human review unless explicitly instructed
+- **Do not push to main**: All changes to main must go through approved PRs. Never push directly to main.
 
 ### Development and Deployment
-- **Run deployments**: Execute deployment scripts and commands (AWS SAM, etc.)
 - **Build and test**: Run build processes, test suites, and validation scripts
 - **Install dependencies**: Add, update, or remove project dependencies as needed
+- **Deployment is automatic**: GitHub Actions deploys to AWS when PRs are merged to main. Do NOT run `sam deploy` manually unless explicitly asked by the user.
 
 ### AWS Operations
 - **SAM build/deploy**: Run `sam build` and `sam deploy` for Lambda deployments
@@ -221,13 +222,13 @@ specs/
 
 ## Development Philosophy
 
-- **Ship early, ship often**: Bias toward action and deployment
+- **Ship early, ship often**: Create PRs frequently for review. This does NOT mean bypassing review or pushing directly to main.
 - **Prototype mindset**: Optimize for learning and iteration, not perfection
 - **Descriptive commits**: Write clear commit messages that explain *why* not just *what*
 - **Spec-driven**: Specifications guide implementation; diverge only with good reason
 - **Cost-conscious**: Keep AWS costs minimal, use Claude Haiku where possible
 - **Self-documenting**: Code and commits should tell the story
-- **Run autonomously**: Don't stop to ask permission for routine operations
+- **Run autonomously**: Don't stop to ask permission for routine operations (but always use PRs for code changes)
 
 ## Communication Style
 
