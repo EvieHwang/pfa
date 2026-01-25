@@ -97,8 +97,6 @@ pids/
 
 # TypeScript
 *.tsbuildinfo
-vite.config.js
-vite.config.d.ts
 
 # Temporary files
 tmp/
