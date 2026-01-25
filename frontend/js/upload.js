@@ -52,6 +52,15 @@ const Upload = {
     },
 
     /**
+     * Go to review queue after upload
+     */
+    goToReview() {
+        this.hideModal();
+        Dashboard.loadData();
+        Dashboard.showReviewModal();
+    },
+
+    /**
      * Handle file upload
      */
     async handleUpload() {
@@ -85,12 +94,18 @@ const Upload = {
             // Read and upload file
             const result = await this.uploadFile(file, accountId);
 
-            // Show success
+            // Show success with optional review button
+            const reviewButton = result.review_count > 0
+                ? `<button class="btn btn-secondary" onclick="Upload.goToReview()" style="margin-top: 12px;">Review ${result.review_count} Transaction${result.review_count > 1 ? 's' : ''}</button>`
+                : '';
+
             status.innerHTML = `
                 <strong>Upload complete!</strong><br>
                 New transactions: ${result.new_count}<br>
+                Auto-categorized: ${result.categorized_count || 0}<br>
                 Duplicates skipped: ${result.duplicate_count}<br>
-                Needs review: ${result.review_count}
+                ${result.review_count > 0 ? `<strong style="color: var(--color-warning);">Needs review: ${result.review_count}</strong>` : 'Needs review: 0'}
+                ${reviewButton}
             `;
             status.className = 'upload-status success';
             status.classList.remove('hidden');
@@ -98,11 +113,13 @@ const Upload = {
             // Reset form
             document.getElementById('upload-form').reset();
 
-            // Refresh dashboard after delay
-            setTimeout(() => {
-                this.hideModal();
-                Dashboard.loadData();
-            }, 2000);
+            // Refresh dashboard after delay (only if no review needed)
+            if (result.review_count === 0) {
+                setTimeout(() => {
+                    this.hideModal();
+                    Dashboard.loadData();
+                }, 2000);
+            }
 
         } catch (error) {
             status.textContent = `Upload failed: ${error.message}`;

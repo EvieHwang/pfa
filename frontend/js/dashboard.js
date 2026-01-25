@@ -299,25 +299,61 @@ const Dashboard = {
         ).join('');
 
         const html = transactions.map(t => `
-            <div class="review-item" data-id="${t.id}">
-                <div>
-                    <div class="review-description">${this.escapeHtml(t.description)}</div>
-                    <div class="review-details">${t.date} &bull; ${t.account_name || ''}</div>
+            <div class="review-item" data-id="${t.id}" data-description="${this.escapeHtml(t.description)}">
+                <div class="review-item-main">
+                    <div class="review-item-info">
+                        <div class="review-description">${this.escapeHtml(t.description)}</div>
+                        <div class="review-details">${t.date} &bull; ${t.account_name || ''}</div>
+                    </div>
+                    <div class="review-amount ${t.amount < 0 ? 'negative' : 'positive'}">
+                        ${App.formatCurrency(t.amount)}
+                    </div>
+                    <div class="review-actions">
+                        <select class="review-category" data-id="${t.id}">
+                            <option value="">Select category...</option>
+                            ${categoryOptions}
+                        </select>
+                        <label class="create-rule-label">
+                            <input type="checkbox" class="create-rule-checkbox" data-id="${t.id}">
+                            <span>Create rule</span>
+                        </label>
+                    </div>
                 </div>
-                <div class="review-amount ${t.amount < 0 ? 'negative' : 'positive'}">
-                    ${App.formatCurrency(t.amount)}
+                <div class="rule-pattern-input hidden" data-id="${t.id}">
+                    <label>
+                        Pattern:
+                        <input type="text" class="rule-pattern" data-id="${t.id}" value="${this.escapeHtml(this.cleanPattern(t.description))}" placeholder="Pattern to match">
+                    </label>
+                    <span class="pattern-hint">Edit to make more general (e.g., remove reference numbers)</span>
                 </div>
-                <select class="review-category" data-id="${t.id}">
-                    <option value="">Select category...</option>
-                    ${categoryOptions}
-                </select>
             </div>
         `).join('');
 
         container.innerHTML = html;
 
+        // Setup create rule checkbox toggle
+        container.querySelectorAll('.create-rule-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const id = e.target.dataset.id;
+                const patternInput = container.querySelector(`.rule-pattern-input[data-id="${id}"]`);
+                patternInput.classList.toggle('hidden', !e.target.checked);
+            });
+        });
+
         // Setup save button
         document.getElementById('save-reviews').onclick = () => this.saveReviews();
+    },
+
+    /**
+     * Clean a transaction description to create a pattern
+     */
+    cleanPattern(description) {
+        if (!description) return '';
+        return description
+            .replace(/\s+#?\d{4,}/g, '')      // Remove long numbers (references)
+            .replace(/\s+\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, '')  // Remove dates
+            .replace(/\s{2,}/g, ' ')           // Normalize whitespace
+            .trim();
     },
 
     /**
@@ -326,13 +362,31 @@ const Dashboard = {
     async saveReviews() {
         const selects = document.querySelectorAll('.review-category');
         const updates = [];
+        const createRules = [];
 
         selects.forEach(select => {
             if (select.value) {
+                const id = select.dataset.id;
+                const categoryId = parseInt(select.value);
+
                 updates.push({
-                    id: select.dataset.id,
-                    category_id: parseInt(select.value)
+                    id: id,
+                    category_id: categoryId
                 });
+
+                // Check if create rule is checked
+                const checkbox = document.querySelector(`.create-rule-checkbox[data-id="${id}"]`);
+                if (checkbox && checkbox.checked) {
+                    const patternInput = document.querySelector(`.rule-pattern[data-id="${id}"]`);
+                    const pattern = patternInput ? patternInput.value.trim() : '';
+                    if (pattern) {
+                        createRules.push({
+                            pattern: pattern,
+                            category_id: categoryId,
+                            priority: 10
+                        });
+                    }
+                }
             }
         });
 
@@ -343,8 +397,11 @@ const Dashboard = {
 
         try {
             App.showLoading();
-            await API.transactions.batchCategorize(updates);
-            App.showToast(`Updated ${updates.length} transactions`, 'success');
+            await API.transactions.batchCategorize(updates, createRules);
+
+            const ruleMsg = createRules.length > 0 ? ` and created ${createRules.length} rule(s)` : '';
+            App.showToast(`Updated ${updates.length} transaction(s)${ruleMsg}`, 'success');
+
             document.getElementById('review-modal').classList.add('hidden');
             await this.loadData();
         } catch (error) {

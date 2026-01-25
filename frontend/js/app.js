@@ -40,6 +40,11 @@ const App = {
                 this.switchTab(tabId);
             });
         });
+
+        // Add Rule button
+        document.getElementById('add-rule-btn').addEventListener('click', () => {
+            this.showAddRuleForm();
+        });
     },
 
     /**
@@ -195,6 +200,9 @@ const App = {
         }
     },
 
+    // Cache categories for rules form
+    categoriesCache: null,
+
     /**
      * Load categorization rules
      */
@@ -203,20 +211,31 @@ const App = {
             const result = await API.rules.list();
             const rules = result.items || [];
 
+            // Also load categories for the form
+            if (!this.categoriesCache) {
+                const catResult = await API.categories.list();
+                this.categoriesCache = catResult.items || [];
+            }
+
             const container = document.getElementById('rules-list');
             if (rules.length === 0) {
-                container.innerHTML = '<p style="color: var(--color-text-secondary); padding: 20px;">No rules defined</p>';
+                container.innerHTML = '<p style="color: var(--color-text-secondary); padding: 20px;">No rules defined. Click "Add Rule" to create one.</p>';
                 return;
             }
 
             container.innerHTML = rules.map(rule => `
-                <div class="rule-item">
+                <div class="rule-item" data-id="${rule.id}">
                     <div class="rule-info">
                         <span class="rule-pattern">${this.escapeHtml(rule.pattern)}</span>
-                        <span class="rule-category"> &rarr; ${rule.category_name}</span>
-                        <span style="color: var(--color-text-secondary); font-size: 12px;"> (priority: ${rule.priority})</span>
+                        <span class="rule-category"> → ${rule.category_name}</span>
+                        <span class="rule-priority">(priority: ${rule.priority})</span>
                     </div>
                     <div class="rule-actions">
+                        <label class="rule-active-toggle">
+                            <input type="checkbox" ${rule.is_active ? 'checked' : ''} onchange="App.toggleRule(${rule.id}, this.checked)">
+                            <span>${rule.is_active ? 'Active' : 'Inactive'}</span>
+                        </label>
+                        <button class="btn btn-ghost" onclick="App.editRule(${rule.id})">Edit</button>
                         <button class="btn btn-ghost" onclick="App.deleteRule(${rule.id})">Delete</button>
                     </div>
                 </div>
@@ -227,10 +246,179 @@ const App = {
     },
 
     /**
+     * Show add rule form
+     */
+    showAddRuleForm() {
+        const categories = this.categoriesCache || [];
+        const categoryOptions = categories.map(c =>
+            `<option value="${c.id}">${c.parent_name ? c.parent_name + ' > ' : ''}${c.name}</option>`
+        ).join('');
+
+        const container = document.getElementById('rules-list');
+        const formHtml = `
+            <div class="rule-form" id="add-rule-form">
+                <h4>Add New Rule</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-rule-pattern">Pattern</label>
+                        <input type="text" id="new-rule-pattern" placeholder="Text to match in descriptions">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-rule-category">Category</label>
+                        <select id="new-rule-category">
+                            <option value="">Select category...</option>
+                            ${categoryOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-rule-priority">Priority</label>
+                        <input type="number" id="new-rule-priority" value="10" min="1">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-ghost" onclick="App.cancelAddRule()">Cancel</button>
+                    <button class="btn btn-primary" onclick="App.saveNewRule()">Save Rule</button>
+                </div>
+            </div>
+        `;
+
+        // Insert form at top
+        container.insertAdjacentHTML('afterbegin', formHtml);
+        document.getElementById('new-rule-pattern').focus();
+    },
+
+    /**
+     * Cancel add rule
+     */
+    cancelAddRule() {
+        const form = document.getElementById('add-rule-form');
+        if (form) form.remove();
+    },
+
+    /**
+     * Save new rule
+     */
+    async saveNewRule() {
+        const pattern = document.getElementById('new-rule-pattern').value.trim();
+        const categoryId = document.getElementById('new-rule-category').value;
+        const priority = parseInt(document.getElementById('new-rule-priority').value) || 10;
+
+        if (!pattern) {
+            this.showToast('Please enter a pattern', 'error');
+            return;
+        }
+        if (!categoryId) {
+            this.showToast('Please select a category', 'error');
+            return;
+        }
+
+        try {
+            await API.rules.create({
+                pattern: pattern,
+                category_id: parseInt(categoryId),
+                priority: priority
+            });
+            this.showToast('Rule created', 'success');
+            this.loadRules();
+        } catch (error) {
+            this.showToast('Failed to create rule: ' + error.message, 'error');
+        }
+    },
+
+    /**
+     * Edit a rule
+     */
+    async editRule(id) {
+        try {
+            const result = await API.rules.list();
+            const rule = (result.items || []).find(r => r.id === id);
+            if (!rule) {
+                this.showToast('Rule not found', 'error');
+                return;
+            }
+
+            const categories = this.categoriesCache || [];
+            const categoryOptions = categories.map(c =>
+                `<option value="${c.id}" ${c.id === rule.category_id ? 'selected' : ''}>${c.parent_name ? c.parent_name + ' > ' : ''}${c.name}</option>`
+            ).join('');
+
+            const ruleItem = document.querySelector(`.rule-item[data-id="${id}"]`);
+            if (!ruleItem) return;
+
+            ruleItem.innerHTML = `
+                <div class="rule-edit-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Pattern</label>
+                            <input type="text" id="edit-rule-pattern-${id}" value="${this.escapeHtml(rule.pattern)}">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="edit-rule-category-${id}">
+                                ${categoryOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <input type="number" id="edit-rule-priority-${id}" value="${rule.priority}" min="1">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-ghost" onclick="App.loadRules()">Cancel</button>
+                        <button class="btn btn-primary" onclick="App.saveRuleEdit(${id})">Save</button>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            this.showToast('Failed to load rule', 'error');
+        }
+    },
+
+    /**
+     * Save rule edit
+     */
+    async saveRuleEdit(id) {
+        const pattern = document.getElementById(`edit-rule-pattern-${id}`).value.trim();
+        const categoryId = document.getElementById(`edit-rule-category-${id}`).value;
+        const priority = parseInt(document.getElementById(`edit-rule-priority-${id}`).value) || 10;
+
+        if (!pattern) {
+            this.showToast('Please enter a pattern', 'error');
+            return;
+        }
+
+        try {
+            await API.rules.update(id, {
+                pattern: pattern,
+                category_id: parseInt(categoryId),
+                priority: priority
+            });
+            this.showToast('Rule updated', 'success');
+            this.loadRules();
+        } catch (error) {
+            this.showToast('Failed to update rule: ' + error.message, 'error');
+        }
+    },
+
+    /**
+     * Toggle rule active status
+     */
+    async toggleRule(id, isActive) {
+        try {
+            await API.rules.update(id, { is_active: isActive });
+            this.showToast(isActive ? 'Rule enabled' : 'Rule disabled', 'success');
+            this.loadRules();
+        } catch (error) {
+            this.showToast('Failed to update rule', 'error');
+            this.loadRules(); // Reload to reset checkbox
+        }
+    },
+
+    /**
      * Delete a rule
      */
     async deleteRule(id) {
-        if (!confirm('Delete this rule?')) return;
+        if (!confirm('Delete this rule? This won\'t affect already-categorized transactions.')) return;
 
         try {
             await API.rules.delete(id);
