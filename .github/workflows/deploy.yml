@@ -125,8 +125,8 @@ jobs:
         run: |
           if [ -d "frontend" ] && [ -f "frontend/index.html" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            # Check if this is a build-based frontend (has package.json with build script)
-            if [ -f "frontend/package.json" ] && grep -q '"build"' frontend/package.json; then
+            # Check if this is a build-based frontend (has package.json with build script AND lock file)
+            if [ -f "frontend/package.json" ] && [ -f "frontend/package-lock.json" ] && grep -q '"build"' frontend/package.json; then
               echo "needs_build=true" >> $GITHUB_OUTPUT
             else
               echo "needs_build=false" >> $GITHUB_OUTPUT
