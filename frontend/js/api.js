@@ -101,8 +101,8 @@ class ApiClient {
         return this.request(`/transactions${query ? '?' + query : ''}`);
     }
 
-    async getReviewQueue() {
-        return this.request('/transactions/review-queue');
+    async getReviewQueue(sort = 'description') {
+        return this.request(`/transactions/review-queue?sort=${sort}`);
     }
 
     async categorize(transactionId, categoryId, createRule = false) {

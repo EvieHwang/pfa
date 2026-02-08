@@ -218,6 +218,8 @@ def handle_login(event: dict) -> dict:
 
 def handle_upload(event: dict) -> dict:
     """Handle CSV upload."""
+    from datetime import datetime, timedelta
+
     body = parse_body(event)
     if not body:
         return error_response(400, "Request body required")
@@ -240,6 +242,13 @@ def handle_upload(event: dict) -> dict:
         transactions = csv_parser.parse_csv(csv_content, account["csv_format"])
     except csv_parser.CSVParseError as e:
         return error_response(400, f"CSV parse error: {e}")
+
+    # Purge transactions older than 30 days
+    cutoff_date = (datetime.now().date() - timedelta(days=30)).isoformat()
+    purge_result = database.execute(
+        "DELETE FROM transactions WHERE date < ?", (cutoff_date,)
+    )
+    purged_count = purge_result.rowcount if purge_result else 0
 
     # Insert transactions, skipping duplicates
     new_count = 0
@@ -273,27 +282,7 @@ def handle_upload(event: dict) -> dict:
         new_count += 1
 
     # Apply auto-categorization rules to new transactions
-    rules = database.fetchall("SELECT * FROM rules ORDER BY priority ASC")
-    categorized_count = 0
-
-    if rules and new_count > 0:
-        # Get uncategorized transactions
-        uncategorized = database.fetchall(
-            "SELECT id, description FROM transactions WHERE needs_review = 1"
-        )
-        for txn in uncategorized:
-            for rule in rules:
-                if rule["pattern"].lower() in txn["description"].lower():
-                    # Check account filter
-                    if rule["account_filter"] and rule["account_filter"] != account_id:
-                        continue
-                    # Apply category
-                    database.execute(
-                        "UPDATE transactions SET category_id = ?, needs_review = 0 WHERE id = ?",
-                        (rule["category_id"], txn["id"]),
-                    )
-                    categorized_count += 1
-                    break
+    categorized_count = _apply_rules_to_uncategorized()
 
     database.commit()
     database.upload_database()
@@ -310,8 +299,37 @@ def handle_upload(event: dict) -> dict:
             "duplicate_count": duplicate_count,
             "categorized_count": categorized_count,
             "needs_review_count": needs_review["count"] if needs_review else 0,
+            "purged_count": purged_count,
         },
     )
+
+
+def _apply_rules_to_uncategorized() -> int:
+    """Apply all rules to uncategorized transactions. Returns count of categorized."""
+    rules = database.fetchall("SELECT * FROM rules ORDER BY priority ASC")
+    if not rules:
+        return 0
+
+    categorized_count = 0
+    uncategorized = database.fetchall(
+        "SELECT id, description, account_id FROM transactions WHERE needs_review = 1"
+    )
+
+    for txn in uncategorized:
+        for rule in rules:
+            if rule["pattern"].lower() in txn["description"].lower():
+                # Check account filter
+                if rule["account_filter"] and rule["account_filter"] != txn["account_id"]:
+                    continue
+                # Apply category
+                database.execute(
+                    "UPDATE transactions SET category_id = ?, needs_review = 0 WHERE id = ?",
+                    (rule["category_id"], txn["id"]),
+                )
+                categorized_count += 1
+                break
+
+    return categorized_count
 
 
 def handle_get_transactions(event: dict) -> dict:
@@ -361,13 +379,24 @@ def handle_get_transactions(event: dict) -> dict:
 
 def handle_review_queue(event: dict) -> dict:
     """Get transactions needing review."""
+    params = event.get("queryStringParameters") or {}
+    sort_by = params.get("sort", "description")  # Default to description
+
+    # Map sort options to SQL
+    sort_map = {
+        "description": "t.description ASC, t.date DESC",
+        "date": "t.date DESC, t.id DESC",
+        "amount": "ABS(t.amount) DESC, t.date DESC",
+    }
+    order_clause = sort_map.get(sort_by, sort_map["description"])
+
     transactions = database.fetchall(
-        """
+        f"""
         SELECT t.*, a.name as account_name
         FROM transactions t
         LEFT JOIN accounts a ON t.account_id = a.id
         WHERE t.needs_review = 1
-        ORDER BY t.date DESC, t.id DESC
+        ORDER BY {order_clause}
         LIMIT 100
         """
     )
@@ -504,38 +533,35 @@ def handle_update_category(event: dict, category_id: int) -> dict:
 
 
 def handle_delete_category(event: dict, category_id: int) -> dict:
-    """Delete a category."""
+    """Delete a category. Transactions using it return to review queue."""
     # Verify category exists
     category = database.fetchone("SELECT * FROM categories WHERE id = ?", (category_id,))
     if not category:
         return error_response(404, "Category not found")
 
-    # Check if any transactions use this category
-    txn_count = database.fetchone(
-        "SELECT COUNT(*) as count FROM transactions WHERE category_id = ?", (category_id,)
-    )
-    if txn_count and txn_count["count"] > 0:
-        return error_response(400, f"Cannot delete: {txn_count['count']} transactions use this category")
+    # Check if any rules use this category - delete them too
+    database.execute("DELETE FROM rules WHERE category_id = ?", (category_id,))
 
-    # Check if any rules use this category
-    rule_count = database.fetchone(
-        "SELECT COUNT(*) as count FROM rules WHERE category_id = ?", (category_id,)
+    # Unassign transactions and return them to review queue
+    txn_result = database.execute(
+        "UPDATE transactions SET category_id = NULL, needs_review = 1 WHERE category_id = ?",
+        (category_id,)
     )
-    if rule_count and rule_count["count"] > 0:
-        return error_response(400, f"Cannot delete: {rule_count['count']} rules use this category")
+    returned_to_review = txn_result.rowcount if txn_result else 0
 
-    # Check for child categories
-    child_count = database.fetchone(
-        "SELECT COUNT(*) as count FROM categories WHERE parent_id = ?", (category_id,)
+    # Check for child categories - reassign to no parent
+    database.execute(
+        "UPDATE categories SET parent_id = NULL WHERE parent_id = ?", (category_id,)
     )
-    if child_count and child_count["count"] > 0:
-        return error_response(400, f"Cannot delete: {child_count['count']} child categories exist")
 
     database.execute("DELETE FROM categories WHERE id = ?", (category_id,))
     database.commit()
     database.upload_database()
 
-    return json_response(200, {"success": True})
+    return json_response(200, {
+        "success": True,
+        "transactions_returned_to_review": returned_to_review,
+    })
 
 
 def handle_get_accounts(event: dict) -> dict:
@@ -608,10 +634,17 @@ def handle_create_rule(event: dict) -> dict:
         (pattern, category_id, priority, account_filter),
     )
 
+    # Auto-apply the new rule to existing uncategorized transactions
+    auto_categorized = _apply_rules_to_uncategorized()
+
     database.commit()
     database.upload_database()
 
-    return json_response(201, {"id": cursor.lastrowid, "success": True})
+    return json_response(201, {
+        "id": cursor.lastrowid,
+        "success": True,
+        "auto_categorized": auto_categorized,
+    })
 
 
 def handle_update_rule(event: dict, rule_id: int) -> dict:
@@ -639,10 +672,13 @@ def handle_update_rule(event: dict, rule_id: int) -> dict:
         (pattern, category_id, priority, account_filter, rule_id),
     )
 
+    # Auto-apply updated rules to existing uncategorized transactions
+    auto_categorized = _apply_rules_to_uncategorized()
+
     database.commit()
     database.upload_database()
 
-    return json_response(200, {"success": True})
+    return json_response(200, {"success": True, "auto_categorized": auto_categorized})
 
 
 def handle_delete_rule(event: dict, rule_id: int) -> dict:

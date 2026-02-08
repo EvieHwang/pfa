@@ -93,43 +93,13 @@ INSERT OR IGNORE INTO accounts (id, name, type, csv_format, include_in_burn_rate
     (3, 'Savings 2', 'savings', 'checking_savings_boa', 1),
     (4, 'Credit Card', 'credit_card', 'credit_card_boa', 1);
 
--- Seed categories
--- Food group
+-- Seed categories (5 base categories)
 INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
     (1, 'Food', 'food', NULL),
-    (2, 'Restaurants', 'food', 1),
-    (3, 'Groceries', 'food', 1),
-    (4, 'Coffee', 'food', 1),
-    (5, 'Takeout & Delivery', 'food', 1);
-
--- Discretionary group
-INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
-    (10, 'Discretionary', 'discretionary', NULL),
-    (11, 'Shopping', 'discretionary', 10),
-    (12, 'Entertainment', 'discretionary', 10),
-    (13, 'Personal Care', 'discretionary', 10),
-    (14, 'Hobbies', 'discretionary', 10),
-    (15, 'Travel', 'discretionary', 10);
-
--- Recurring group
-INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
-    (20, 'Recurring', 'recurring', NULL),
-    (21, 'Rent/Mortgage', 'recurring', 20),
-    (22, 'Utilities', 'recurring', 20),
-    (23, 'Insurance', 'recurring', 20),
-    (24, 'Subscriptions', 'recurring', 20),
-    (25, 'Phone/Internet', 'recurring', 20);
-
--- Explosion group (one-off large purchases)
-INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
-    (30, 'Explosion', 'explosion', NULL);
-
--- Excluded group (transfers, income, etc.)
-INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
-    (40, 'Excluded', 'excluded', NULL),
-    (41, 'Transfers', 'excluded', 40),
-    (42, 'Income', 'excluded', 40),
-    (43, 'Payments', 'excluded', 40);
+    (2, 'Discretionary', 'discretionary', NULL),
+    (3, 'Recurring', 'recurring', NULL),
+    (4, 'Explosion', 'explosion', NULL),
+    (5, 'Excluded', 'excluded', NULL);
 
 -- Seed default targets
 INSERT OR IGNORE INTO targets (burn_rate_group, daily_target) VALUES

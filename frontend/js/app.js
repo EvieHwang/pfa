@@ -93,6 +93,9 @@ function setupEventListeners() {
     document.querySelectorAll('.feedback-buttons button').forEach(btn => {
         btn.addEventListener('click', handleFeedback);
     });
+
+    // Review queue sort
+    document.getElementById('review-sort').addEventListener('change', loadReviewQueue);
 }
 
 // Auth
@@ -418,7 +421,40 @@ function renderTransactionsTable(transactions) {
                     return `<span style="color: ${color}">${val < 0 ? '-' : '+'}${formatted}</span>`;
                 }
             },
-            { title: 'Category', field: 'category_name', width: 140 },
+            {
+                title: 'Category',
+                field: 'category_id',
+                width: 140,
+                formatter: (cell) => {
+                    const data = cell.getRow().getData();
+                    const catId = data.category_id;
+                    let html = `<select class="inline-category-select" data-txn-id="${data.id}">`;
+                    html += '<option value="">Uncategorized</option>';
+                    html += renderCategoryOptions();
+                    html += '</select>';
+                    return html;
+                },
+                cellRendered: (cell) => {
+                    const select = cell.getElement().querySelector('.inline-category-select');
+                    if (select) {
+                        const data = cell.getRow().getData();
+                        select.value = data.category_id || '';
+                        select.addEventListener('change', async (e) => {
+                            const txnId = parseInt(e.target.dataset.txnId);
+                            const categoryId = e.target.value ? parseInt(e.target.value) : null;
+                            try {
+                                await api.categorize(txnId, categoryId, false);
+                                data.category_id = categoryId;
+                                data.category_name = categoryId ? categories.find(c => c.id === categoryId)?.name : null;
+                                cell.getRow().update(data);
+                                showToast('Category updated', 'success');
+                            } catch (error) {
+                                showToast(error.message, 'error');
+                            }
+                        });
+                    }
+                }
+            },
             { title: 'Account', field: 'account_name', width: 120 },
             {
                 title: 'Flags',
@@ -463,9 +499,10 @@ function renderTransactionsTable(transactions) {
 
 // Review Queue
 async function loadReviewQueue() {
+    const sort = document.getElementById('review-sort').value;
     showLoading();
     try {
-        const data = await api.getReviewQueue();
+        const data = await api.getReviewQueue(sort);
         renderReviewList(data.transactions);
     } catch (error) {
         showToast(error.message, 'error');

@@ -655,3 +655,20 @@ body {
     outline: none;
     border-color: var(--accent);
 }
+
+/* Inline category select in transactions table */
+.inline-category-select {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.inline-category-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
