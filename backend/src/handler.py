@@ -74,6 +74,9 @@ def check_auth(event: dict) -> bool:
 def lambda_handler(event: dict, context: Any) -> dict:
     """Main Lambda entry point."""
     try:
+        # Sync database from S3 at start of each request
+        database.sync_from_s3()
+
         http_method = event.get("httpMethod", "GET")
         path = event.get("path", "/")
 

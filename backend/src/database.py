@@ -67,6 +67,19 @@ def upload_database() -> bool:
         raise
 
 
+def sync_from_s3() -> None:
+    """Ensure local database is synced from S3. Call at start of each request."""
+    global _connection
+
+    # Close existing connection if any
+    if _connection is not None:
+        _connection.close()
+        _connection = None
+
+    # Always download fresh copy from S3
+    download_database()
+
+
 def get_connection() -> sqlite3.Connection:
     """Get or create database connection."""
     global _connection
