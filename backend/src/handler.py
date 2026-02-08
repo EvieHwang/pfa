@@ -437,7 +437,8 @@ def handle_categorize(event: dict, transaction_id: int) -> dict:
         (category_id, transaction_id),
     )
 
-    # Optionally create a rule
+    # Optionally create a rule and apply to all matching transactions
+    auto_categorized = 0
     if create_rule and category_id:
         # Use first 30 chars of description as pattern
         pattern = txn["description"][:30].strip()
@@ -450,11 +451,13 @@ def handle_categorize(event: dict, transaction_id: int) -> dict:
                 "INSERT INTO rules (pattern, category_id, priority) VALUES (?, ?, 100)",
                 (pattern, category_id),
             )
+            # Apply the new rule to all matching uncategorized transactions
+            auto_categorized = _apply_rules_to_uncategorized()
 
     database.commit()
     database.upload_database()
 
-    return json_response(200, {"success": True})
+    return json_response(200, {"success": True, "auto_categorized": auto_categorized})
 
 
 def handle_get_categories(event: dict) -> dict:

@@ -520,17 +520,24 @@ function renderReviewList(transactions) {
             if (!categoryId) return;
 
             try {
-                await api.categorize(parseInt(txnId), parseInt(categoryId), true);
+                const result = await api.categorize(parseInt(txnId), parseInt(categoryId), true);
                 item.remove();
 
-                const remaining = container.querySelectorAll('.review-item').length;
-                updateReviewBadge(remaining);
+                // If rule auto-categorized other transactions, reload the list
+                if (result.auto_categorized > 0) {
+                    showToast(`Categorized! ${result.auto_categorized} similar transactions also updated.`, 'success');
+                    await loadReviewQueue();
+                    const statusData = await api.getStatus();
+                    updateReviewBadge(statusData.pending_review_count);
+                } else {
+                    const remaining = container.querySelectorAll('.review-item').length;
+                    updateReviewBadge(remaining);
 
-                if (remaining === 0) {
-                    container.innerHTML = '<div class="dashboard-placeholder"><p>All done!</p></div>';
+                    if (remaining === 0) {
+                        container.innerHTML = '<div class="dashboard-placeholder"><p>All done!</p></div>';
+                    }
+                    showToast('Categorized!', 'success');
                 }
-
-                showToast('Categorized!', 'success');
             } catch (error) {
                 showToast(error.message, 'error');
             }
