@@ -177,50 +177,26 @@ function populateCategoryDropdowns() {
     select.innerHTML = '';
     select.appendChild(firstOption);
 
-    const groups = {};
+    // Flat list of categories
     categories.forEach(cat => {
-        if (!groups[cat.burn_rate_group]) {
-            groups[cat.burn_rate_group] = [];
-        }
-        groups[cat.burn_rate_group].push(cat);
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        select.appendChild(option);
     });
-
-    for (const [group, cats] of Object.entries(groups)) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = group.charAt(0).toUpperCase() + group.slice(1);
-        cats.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.name;
-            optgroup.appendChild(option);
-        });
-        select.appendChild(optgroup);
-    }
 }
 
 function populateRuleCategoryDropdown() {
     const select = document.getElementById('rule-category');
     select.innerHTML = '<option value="">Select category...</option>';
 
-    const groups = {};
+    // Flat list of categories
     categories.forEach(cat => {
-        if (!groups[cat.burn_rate_group]) {
-            groups[cat.burn_rate_group] = [];
-        }
-        groups[cat.burn_rate_group].push(cat);
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        select.appendChild(option);
     });
-
-    for (const [group, cats] of Object.entries(groups)) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = group.charAt(0).toUpperCase() + group.slice(1);
-        cats.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.name;
-            optgroup.appendChild(option);
-        });
-        select.appendChild(optgroup);
-    }
 }
 
 function updateReviewBadge(count) {
@@ -563,22 +539,11 @@ function renderReviewList(transactions) {
 }
 
 function renderCategoryOptions() {
-    const groups = {};
-    categories.forEach(cat => {
-        if (!groups[cat.burn_rate_group]) {
-            groups[cat.burn_rate_group] = [];
-        }
-        groups[cat.burn_rate_group].push(cat);
-    });
-
+    // Flat list of categories - no optgroups needed
     let html = '';
-    for (const [group, cats] of Object.entries(groups)) {
-        html += `<optgroup label="${group.charAt(0).toUpperCase() + group.slice(1)}">`;
-        cats.forEach(cat => {
-            html += `<option value="${cat.id}">${cat.name}</option>`;
-        });
-        html += '</optgroup>';
-    }
+    categories.forEach(cat => {
+        html += `<option value="${cat.id}">${cat.name}</option>`;
+    });
     return html;
 }
 
