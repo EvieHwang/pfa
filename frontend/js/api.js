@@ -99,6 +99,62 @@ class ApiClient {
     async getStatus() {
         return this.request('/status');
     }
+
+    // Rules
+    async getRules() {
+        return this.request('/rules');
+    }
+
+    async createRule(pattern, categoryId, priority = 100, accountFilter = null) {
+        return this.request('/rules', {
+            method: 'POST',
+            body: JSON.stringify({
+                pattern,
+                category_id: categoryId,
+                priority,
+                account_filter: accountFilter,
+            }),
+        });
+    }
+
+    async updateRule(ruleId, updates) {
+        return this.request(`/rules/${ruleId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+
+    async deleteRule(ruleId) {
+        return this.request(`/rules/${ruleId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    // Recurring
+    async toggleRecurring(transactionId) {
+        return this.request(`/transactions/${transactionId}/recurring`, {
+            method: 'PATCH',
+        });
+    }
+
+    // Burn Rate
+    async getBurnRate() {
+        return this.request('/burn-rate');
+    }
+
+    async getTargets() {
+        return this.request('/targets');
+    }
+
+    async submitFeedback(burnRateGroup, sentiment) {
+        return this.request('/feedback', {
+            method: 'POST',
+            body: JSON.stringify({
+                burn_rate_group: burnRateGroup,
+                sentiment,
+            }),
+        });
+    }
 }
 
 // Global API instance

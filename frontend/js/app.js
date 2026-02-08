@@ -6,6 +6,8 @@
 let accounts = [];
 let categories = [];
 let transactionsTable = null;
+let foodChart = null;
+let discretionaryChart = null;
 
 // DOM Elements
 const loginModal = document.getElementById('login-modal');
@@ -17,26 +19,24 @@ const uploadForm = document.getElementById('upload-form');
 const uploadStatus = document.getElementById('upload-status');
 const reviewBadge = document.getElementById('review-badge');
 const loading = document.getElementById('loading');
+const ruleModal = document.getElementById('rule-modal');
+const ruleForm = document.getElementById('rule-form');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-    // Check if already logged in
     if (api.isAuthenticated()) {
         try {
             await loadInitialData();
             showApp();
         } catch (e) {
-            // Token expired or invalid
             api.logout();
             showLogin();
         }
     } else {
         showLogin();
     }
-
-    // Event listeners
     setupEventListeners();
 }
 
@@ -56,6 +56,16 @@ function setupEventListeners() {
     document.getElementById('upload-btn').addEventListener('click', () => showModal('upload-modal'));
     uploadForm.addEventListener('submit', handleUpload);
 
+    // Rule modal
+    document.getElementById('add-rule-btn').addEventListener('click', () => {
+        document.getElementById('rule-modal-title').textContent = 'Add Rule';
+        document.getElementById('rule-id').value = '';
+        ruleForm.reset();
+        populateRuleCategoryDropdown();
+        showModal('rule-modal');
+    });
+    ruleForm.addEventListener('submit', handleSaveRule);
+
     // Close buttons
     document.querySelectorAll('[data-close]').forEach(btn => {
         btn.addEventListener('click', () => hideModal(btn.dataset.close));
@@ -66,6 +76,11 @@ function setupEventListeners() {
     document.getElementById('category-filter').addEventListener('change', loadTransactions);
     document.getElementById('start-date').addEventListener('change', loadTransactions);
     document.getElementById('end-date').addEventListener('change', loadTransactions);
+
+    // Feedback buttons
+    document.querySelectorAll('.feedback-buttons button').forEach(btn => {
+        btn.addEventListener('click', handleFeedback);
+    });
 }
 
 // Auth
@@ -116,11 +131,8 @@ async function loadInitialData() {
     accounts = accountsData.accounts;
     categories = categoriesData.categories;
 
-    // Populate dropdowns
     populateAccountDropdowns();
     populateCategoryDropdowns();
-
-    // Update review badge
     updateReviewBadge(statusData.pending_review_count);
 }
 
@@ -131,7 +143,6 @@ function populateAccountDropdowns() {
     ];
 
     selects.forEach(select => {
-        // Keep first option
         const firstOption = select.options[0];
         select.innerHTML = '';
         select.appendChild(firstOption);
@@ -151,7 +162,31 @@ function populateCategoryDropdowns() {
     select.innerHTML = '';
     select.appendChild(firstOption);
 
-    // Group by burn_rate_group
+    const groups = {};
+    categories.forEach(cat => {
+        if (!groups[cat.burn_rate_group]) {
+            groups[cat.burn_rate_group] = [];
+        }
+        groups[cat.burn_rate_group].push(cat);
+    });
+
+    for (const [group, cats] of Object.entries(groups)) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = group.charAt(0).toUpperCase() + group.slice(1);
+        cats.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            optgroup.appendChild(option);
+        });
+        select.appendChild(optgroup);
+    }
+}
+
+function populateRuleCategoryDropdown() {
+    const select = document.getElementById('rule-category');
+    select.innerHTML = '<option value="">Select category...</option>';
+
     const groups = {};
     categories.forEach(cat => {
         if (!groups[cat.burn_rate_group]) {
@@ -184,22 +219,131 @@ function updateReviewBadge(count) {
 
 // Views
 function switchView(viewName) {
-    // Update tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.view === viewName);
     });
 
-    // Update views
     document.querySelectorAll('.view').forEach(view => {
         view.classList.add('hidden');
     });
     document.getElementById(`${viewName}-view`).classList.remove('hidden');
 
-    // Load view data
-    if (viewName === 'transactions') {
+    if (viewName === 'dashboard') {
+        loadDashboard();
+    } else if (viewName === 'transactions') {
         loadTransactions();
     } else if (viewName === 'review') {
         loadReviewQueue();
+    } else if (viewName === 'rules') {
+        loadRules();
+    }
+}
+
+// Dashboard with Burn Rate
+async function loadDashboard() {
+    showLoading();
+    try {
+        const data = await api.getBurnRate();
+        renderBurnRateCard('food', data.food);
+        renderBurnRateCard('discretionary', data.discretionary);
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderBurnRateCard(group, data) {
+    // Update stats
+    document.getElementById(`${group}-current`).textContent = `$${data.current_14day.toFixed(0)}/day`;
+    document.getElementById(`${group}-target`).textContent = `$${data.target.toFixed(0)}/day`;
+
+    // Update arrow
+    const arrow = document.getElementById(`${group}-arrow`);
+    arrow.className = `arrow ${data.arrow}`;
+
+    // Render chart
+    const ctx = document.getElementById(`${group}-chart`).getContext('2d');
+    const chartInstance = group === 'food' ? foodChart : discretionaryChart;
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    const labels = data.curve.map(p => `${p.window}d`);
+    const values = data.curve.map(p => p.daily_rate);
+    const targetLine = data.curve.map(() => data.target);
+
+    const newChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Burn Rate',
+                    data: values,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                },
+                {
+                    label: 'Target',
+                    data: targetLine,
+                    borderColor: '#22c55e',
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: {
+                    grid: { color: '#262626' },
+                    ticks: { color: '#737373' },
+                },
+                y: {
+                    grid: { color: '#262626' },
+                    ticks: {
+                        color: '#737373',
+                        callback: v => `$${v}`,
+                    },
+                },
+            },
+        },
+    });
+
+    if (group === 'food') {
+        foodChart = newChart;
+    } else {
+        discretionaryChart = newChart;
+    }
+}
+
+async function handleFeedback(e) {
+    const group = e.target.dataset.group;
+    const sentiment = e.target.dataset.sentiment;
+
+    showLoading();
+    try {
+        const result = await api.submitFeedback(group, sentiment);
+        if (result.new_target) {
+            showToast(`Target updated to $${result.new_target}/day`, 'success');
+        } else {
+            showToast('Feedback recorded', 'success');
+        }
+        await loadDashboard();
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -292,7 +436,6 @@ function renderReviewList(transactions) {
         </div>
     `).join('');
 
-    // Add event listeners
     container.querySelectorAll('.category-select').forEach(select => {
         select.addEventListener('change', async (e) => {
             const item = e.target.closest('.review-item');
@@ -305,7 +448,6 @@ function renderReviewList(transactions) {
                 await api.categorize(parseInt(txnId), parseInt(categoryId), true);
                 item.remove();
 
-                // Update badge
                 const remaining = container.querySelectorAll('.review-item').length;
                 updateReviewBadge(remaining);
 
@@ -341,6 +483,102 @@ function renderCategoryOptions() {
     return html;
 }
 
+// Rules
+async function loadRules() {
+    showLoading();
+    try {
+        const data = await api.getRules();
+        renderRulesList(data.rules);
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderRulesList(rules) {
+    const container = document.getElementById('rules-list');
+
+    if (rules.length === 0) {
+        container.innerHTML = '<div class="dashboard-placeholder"><p>No rules yet. Add one above!</p></div>';
+        return;
+    }
+
+    container.innerHTML = rules.map(rule => `
+        <div class="rule-item" data-id="${rule.id}">
+            <div class="rule-item-info">
+                <span class="rule-item-pattern">${escapeHtml(rule.pattern)}</span>
+                <div class="rule-item-category">→ ${rule.category_name} (priority: ${rule.priority})</div>
+            </div>
+            <div class="rule-item-actions">
+                <button class="btn btn-ghost edit-rule-btn">Edit</button>
+                <button class="btn btn-ghost delete-rule-btn" style="color: var(--danger)">Delete</button>
+            </div>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.edit-rule-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const item = e.target.closest('.rule-item');
+            const rule = rules.find(r => r.id === parseInt(item.dataset.id));
+            openEditRuleModal(rule);
+        });
+    });
+
+    container.querySelectorAll('.delete-rule-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const item = e.target.closest('.rule-item');
+            const ruleId = parseInt(item.dataset.id);
+
+            if (confirm('Delete this rule?')) {
+                try {
+                    await api.deleteRule(ruleId);
+                    item.remove();
+                    showToast('Rule deleted', 'success');
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }
+        });
+    });
+}
+
+function openEditRuleModal(rule) {
+    document.getElementById('rule-modal-title').textContent = 'Edit Rule';
+    document.getElementById('rule-id').value = rule.id;
+    document.getElementById('rule-pattern').value = rule.pattern;
+    document.getElementById('rule-priority').value = rule.priority;
+    populateRuleCategoryDropdown();
+    document.getElementById('rule-category').value = rule.category_id;
+    showModal('rule-modal');
+}
+
+async function handleSaveRule(e) {
+    e.preventDefault();
+
+    const ruleId = document.getElementById('rule-id').value;
+    const pattern = document.getElementById('rule-pattern').value;
+    const categoryId = parseInt(document.getElementById('rule-category').value);
+    const priority = parseInt(document.getElementById('rule-priority').value);
+
+    showLoading();
+    try {
+        if (ruleId) {
+            await api.updateRule(parseInt(ruleId), { pattern, category_id: categoryId, priority });
+            showToast('Rule updated', 'success');
+        } else {
+            await api.createRule(pattern, categoryId, priority);
+            showToast('Rule created', 'success');
+        }
+        hideModal('rule-modal');
+        await loadRules();
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
 // Upload
 async function handleUpload(e) {
     e.preventDefault();
@@ -368,12 +606,8 @@ async function handleUpload(e) {
         uploadStatus.classList.remove('hidden', 'error');
         uploadStatus.classList.add('success');
 
-        // Update review badge
         updateReviewBadge(result.needs_review_count);
-
-        // Reset form
         uploadForm.reset();
-
         showToast('Upload successful!', 'success');
     } catch (error) {
         uploadStatus.textContent = error.message;
@@ -391,7 +625,9 @@ function showModal(id) {
 
 function hideModal(id) {
     document.getElementById(id).classList.add('hidden');
-    uploadStatus.classList.add('hidden');
+    if (id === 'upload-modal') {
+        uploadStatus.classList.add('hidden');
+    }
 }
 
 // Loading
