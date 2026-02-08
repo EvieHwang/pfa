@@ -591,19 +591,23 @@ body {
     border-right-color: var(--border);
 }
 
-/* Uncategorized row highlight */
+/* Uncategorized row highlight - subtle dark red tint */
 .tabulator-row.uncategorized-row {
-    background: rgba(239, 68, 68, 0.1) !important;
-    border-left: 3px solid var(--danger);
+    background: rgba(180, 40, 40, 0.15) !important;
+    border-left: 2px solid rgba(180, 40, 40, 0.5);
 }
 
 .tabulator-row.uncategorized-row:hover {
-    background: rgba(239, 68, 68, 0.15) !important;
+    background: rgba(180, 40, 40, 0.25) !important;
 }
 
-/* Explosion row styling (dimmed) */
+/* Explosion row styling - subtle dark tint */
 .tabulator-row.explosion-row {
-    opacity: 0.6;
+    background: rgba(80, 80, 80, 0.3) !important;
+}
+
+.tabulator-row.explosion-row:hover {
+    background: rgba(80, 80, 80, 0.4) !important;
 }
 
 /* Flag buttons in table */
@@ -623,19 +627,24 @@ body {
     opacity: 1;
 }
 
-/* Category group headers */
-.category-group {
-    margin-bottom: 1.5rem;
+/* Category list (read-only) */
+.category-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-.category-group-title {
-    font-size: 0.875rem;
+.category-item-name {
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-    padding-left: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.category-item-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
 }
 
 /* Form input styling */

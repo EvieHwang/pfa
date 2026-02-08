@@ -21,8 +21,6 @@ const reviewBadge = document.getElementById('review-badge');
 const loading = document.getElementById('loading');
 const ruleModal = document.getElementById('rule-modal');
 const ruleForm = document.getElementById('rule-form');
-const categoryModal = document.getElementById('category-modal');
-const categoryForm = document.getElementById('category-form');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -67,16 +65,6 @@ function setupEventListeners() {
         showModal('rule-modal');
     });
     ruleForm.addEventListener('submit', handleSaveRule);
-
-    // Category modal
-    document.getElementById('add-category-btn').addEventListener('click', () => {
-        document.getElementById('category-modal-title').textContent = 'Add Category';
-        document.getElementById('category-id').value = '';
-        categoryForm.reset();
-        populateCategoryParentDropdown();
-        showModal('category-modal');
-    });
-    categoryForm.addEventListener('submit', handleSaveCategory);
 
     // Close buttons
     document.querySelectorAll('[data-close]').forEach(btn => {
@@ -521,23 +509,16 @@ function renderReviewList(transactions) {
 
             try {
                 const result = await api.categorize(parseInt(txnId), parseInt(categoryId), true);
-                item.remove();
 
-                // If rule auto-categorized other transactions, reload the list
+                // Always reload the review queue to show updated state
                 if (result.auto_categorized > 0) {
                     showToast(`Categorized! ${result.auto_categorized} similar transactions also updated.`, 'success');
-                    await loadReviewQueue();
-                    const statusData = await api.getStatus();
-                    updateReviewBadge(statusData.pending_review_count);
                 } else {
-                    const remaining = container.querySelectorAll('.review-item').length;
-                    updateReviewBadge(remaining);
-
-                    if (remaining === 0) {
-                        container.innerHTML = '<div class="dashboard-placeholder"><p>All done!</p></div>';
-                    }
                     showToast('Categorized!', 'success');
                 }
+
+                // Reload to refresh the list
+                await loadReviewQueue();
             } catch (error) {
                 showToast(error.message, 'error');
             }
@@ -723,7 +704,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Categories Management
+// Categories View (read-only - 5 fixed categories)
 async function loadCategories() {
     showLoading();
     try {
@@ -740,133 +721,27 @@ async function loadCategories() {
 function renderCategoriesList(cats) {
     const container = document.getElementById('categories-list');
 
-    if (cats.length === 0) {
-        container.innerHTML = '<div class="dashboard-placeholder"><p>No categories yet.</p></div>';
-        return;
-    }
-
-    // Group by burn_rate_group
-    const groups = {};
-    cats.forEach(cat => {
-        if (!groups[cat.burn_rate_group]) {
-            groups[cat.burn_rate_group] = [];
-        }
-        groups[cat.burn_rate_group].push(cat);
-    });
+    // Simple list of the 5 fixed categories with descriptions
+    const descriptions = {
+        'Food': 'Groceries, restaurants, coffee, takeout - tracked in burn rate',
+        'Discretionary': 'Shopping, entertainment, hobbies - tracked in burn rate',
+        'Recurring': 'Rent, utilities, subscriptions - excluded from burn rate',
+        'Explosion': 'One-off large purchases - excluded from burn rate',
+        'Excluded': 'Transfers, income, payments - excluded from burn rate'
+    };
 
     let html = '';
-    const groupOrder = ['food', 'discretionary', 'recurring', 'explosion', 'excluded'];
-
-    for (const group of groupOrder) {
-        const groupCats = groups[group];
-        if (!groupCats || groupCats.length === 0) continue;
-
-        html += `<div class="category-group">
-            <h3 class="category-group-title">${group.charAt(0).toUpperCase() + group.slice(1)}</h3>`;
-
-        groupCats.forEach(cat => {
-            const parentName = cat.parent_id ? cats.find(c => c.id === cat.parent_id)?.name : null;
-            html += `
-                <div class="rule-item" data-id="${cat.id}">
-                    <div class="rule-item-info">
-                        <span class="rule-item-pattern">${escapeHtml(cat.name)}</span>
-                        ${parentName ? `<div class="rule-item-category">↳ child of ${escapeHtml(parentName)}</div>` : ''}
-                    </div>
-                    <div class="rule-item-actions">
-                        <button class="btn btn-ghost edit-category-btn">Edit</button>
-                        <button class="btn btn-ghost delete-category-btn" style="color: var(--danger)">Delete</button>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-    }
+    cats.forEach(cat => {
+        const desc = descriptions[cat.name] || cat.burn_rate_group;
+        html += `
+            <div class="category-item">
+                <div class="category-item-name">${escapeHtml(cat.name)}</div>
+                <div class="category-item-desc">${desc}</div>
+            </div>
+        `;
+    });
 
     container.innerHTML = html;
-
-    // Attach event listeners
-    container.querySelectorAll('.edit-category-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const item = e.target.closest('.rule-item');
-            const cat = cats.find(c => c.id === parseInt(item.dataset.id));
-            openEditCategoryModal(cat);
-        });
-    });
-
-    container.querySelectorAll('.delete-category-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const item = e.target.closest('.rule-item');
-            const catId = parseInt(item.dataset.id);
-
-            if (confirm('Delete this category?')) {
-                try {
-                    await api.deleteCategory(catId);
-                    item.remove();
-                    showToast('Category deleted', 'success');
-                    // Refresh categories list
-                    await loadCategories();
-                    populateCategoryDropdowns();
-                } catch (error) {
-                    showToast(error.message, 'error');
-                }
-            }
-        });
-    });
-}
-
-function populateCategoryParentDropdown(excludeId = null) {
-    const select = document.getElementById('category-parent');
-    select.innerHTML = '<option value="">None (top-level)</option>';
-
-    categories.forEach(cat => {
-        if (excludeId && cat.id === excludeId) return;
-        const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = `${cat.name} (${cat.burn_rate_group})`;
-        select.appendChild(option);
-    });
-}
-
-function openEditCategoryModal(cat) {
-    document.getElementById('category-modal-title').textContent = 'Edit Category';
-    document.getElementById('category-id').value = cat.id;
-    document.getElementById('category-name').value = cat.name;
-    document.getElementById('category-group').value = cat.burn_rate_group;
-    populateCategoryParentDropdown(cat.id);
-    document.getElementById('category-parent').value = cat.parent_id || '';
-    showModal('category-modal');
-}
-
-async function handleSaveCategory(e) {
-    e.preventDefault();
-
-    const catId = document.getElementById('category-id').value;
-    const name = document.getElementById('category-name').value;
-    const burnRateGroup = document.getElementById('category-group').value;
-    const parentId = document.getElementById('category-parent').value || null;
-
-    showLoading();
-    try {
-        if (catId) {
-            await api.updateCategory(parseInt(catId), {
-                name,
-                burn_rate_group: burnRateGroup,
-                parent_id: parentId ? parseInt(parentId) : null,
-            });
-            showToast('Category updated', 'success');
-        } else {
-            await api.createCategory(name, burnRateGroup, parentId ? parseInt(parentId) : null);
-            showToast('Category created', 'success');
-        }
-        hideModal('category-modal');
-        await loadCategories();
-        populateCategoryDropdowns();
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        hideLoading();
-    }
 }
 
 // Utils

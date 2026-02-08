@@ -147,7 +147,7 @@
             <div id="categories-view" class="view hidden">
                 <div class="view-header">
                     <h2>Categories</h2>
-                    <button id="add-category-btn" class="btn btn-secondary">Add Category</button>
+                    <p class="subtitle">5 fixed categories for burn rate tracking</p>
                 </div>
                 <div id="categories-list"></div>
             </div>
@@ -210,43 +210,6 @@
         </div>
     </div>
 
-    <!-- Category Modal -->
-    <div id="category-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="category-modal-title">Add Category</h2>
-                <button class="close-btn" data-close="category-modal">&times;</button>
-            </div>
-            <form id="category-form">
-                <input type="hidden" id="category-id">
-                <div class="form-group">
-                    <label for="category-name">Name</label>
-                    <input type="text" id="category-name" placeholder="e.g., Groceries" required>
-                </div>
-                <div class="form-group">
-                    <label for="category-group">Burn Rate Group</label>
-                    <select id="category-group" required>
-                        <option value="">Select group...</option>
-                        <option value="food">Food</option>
-                        <option value="discretionary">Discretionary</option>
-                        <option value="recurring">Recurring</option>
-                        <option value="explosion">Explosion</option>
-                        <option value="excluded">Excluded</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="category-parent">Parent Category (optional)</label>
-                    <select id="category-parent">
-                        <option value="">None (top-level)</option>
-                    </select>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-ghost" data-close="category-modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Loading Overlay -->
     <div id="loading" class="loading hidden">
