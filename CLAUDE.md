@@ -200,6 +200,24 @@ The GitHub Actions workflow automatically sets `DomainName` to `{repo-name}.eveh
 - If `DomainName` is empty, the template falls back to the CloudFront domain (e.g., `d123.cloudfront.net`)
 - Domain can be overridden if you want something other than the repo name
 
+### CloudFront Cache Invalidation
+
+**After pushing frontend changes, always invalidate the CloudFront cache** to ensure users see the latest version immediately.
+
+```bash
+# Get distribution ID for this project
+aws cloudfront list-distributions --query "DistributionList.Items[?contains(Aliases.Items, 'pfa.evehwang.com')].Id" --output text
+
+# Invalidate all cached files (replace DISTRIBUTION_ID with the actual ID)
+aws cloudfront create-invalidation --distribution-id DISTRIBUTION_ID --paths "/*"
+```
+
+**For this project (pfa):**
+- Distribution ID: `E27YLNLEOHX92F`
+- Quick invalidation: `aws cloudfront create-invalidation --distribution-id E27YLNLEOHX92F --paths "/*"`
+
+Invalidation typically completes in 1-2 minutes. Users may need to hard refresh (Cmd+Shift+R / Ctrl+Shift+R) if they had the page open.
+
 ## Aerie Skills Integration
 
 This project has access to shared skills hosted on Aerie (`https://aerie.evehwang.com/`). Skills provide reusable knowledge like design systems, evaluation frameworks, and architectural patterns.
