@@ -3,293 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PFA - Personal Finance Awareness</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <!-- Tabulator CSS -->
-    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <title>Burn Rate</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+        p {
+            color: #737373;
+            font-size: 1.125rem;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+        .status {
+            margin-top: 2rem;
+            padding: 0.5rem 1rem;
+            background: #1a1a1a;
+            border-radius: 0.5rem;
+            display: inline-block;
+            font-size: 0.875rem;
+            color: #a3a3a3;
+        }
+    </style>
 </head>
 <body>
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal">
-        <div class="modal-content login-modal-content">
-            <h2>PFA Login</h2>
-            <p class="login-subtitle">Personal Finance Awareness</p>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required autofocus>
-                </div>
-                <div id="login-error" class="error-message hidden"></div>
-                <button type="submit" class="btn btn-primary btn-full">Login</button>
-            </form>
-        </div>
+    <div class="container">
+        <h1>Burn Rate</h1>
+        <p>Personal finance awareness through trend visualization and sentiment feedback.</p>
+        <div class="status">Phase 1 in progress</div>
     </div>
-
-    <!-- Main App Container -->
-    <div id="app" class="hidden">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <h1 class="logo">PFA</h1>
-            </div>
-            <div class="header-right">
-                <button id="upload-btn" class="btn btn-secondary">Upload CSV</button>
-                <button id="settings-btn" class="btn btn-ghost">Settings</button>
-                <button id="logout-btn" class="btn btn-ghost">Logout</button>
-            </div>
-        </header>
-
-        <!-- Filters Bar -->
-        <div class="filters-bar">
-            <select id="period-filter" class="filter-select">
-                <option value="this-month">This Month</option>
-                <option value="last-month">Last Month</option>
-                <option value="last-3-months">Last 3 Months</option>
-                <option value="ytd">Year to Date</option>
-                <option value="custom">Custom Range</option>
-            </select>
-            <select id="account-filter" class="filter-select">
-                <option value="">All Accounts</option>
-                <option value="checking">Checking</option>
-                <option value="savings">Savings</option>
-                <option value="credit">Credit Card</option>
-            </select>
-            <div id="custom-date-range" class="custom-date-range hidden">
-                <input type="date" id="start-date" class="date-input">
-                <span>to</span>
-                <input type="date" id="end-date" class="date-input">
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Dashboard View -->
-            <div id="dashboard-view" class="view">
-                <!-- Summary Cards -->
-                <div class="summary-cards">
-                    <div class="card summary-card">
-                        <div class="card-label">Net Worth</div>
-                        <div class="card-value" id="net-worth">$0</div>
-                        <div class="card-change" id="net-worth-change"></div>
-                    </div>
-                    <div class="card summary-card">
-                        <div class="card-label">Monthly Spending</div>
-                        <div class="card-value negative" id="monthly-spending">$0</div>
-                        <div class="card-change" id="spending-change"></div>
-                    </div>
-                    <div class="card summary-card">
-                        <div class="card-label">Top Category</div>
-                        <div class="card-value" id="top-category">-</div>
-                        <div class="card-subvalue" id="top-category-amount"></div>
-                    </div>
-                    <div class="card summary-card clickable" id="review-card">
-                        <div class="card-label">Review Queue</div>
-                        <div class="card-value" id="review-count">0</div>
-                        <div class="card-subvalue">transactions</div>
-                    </div>
-                </div>
-
-                <!-- Charts Row -->
-                <div class="charts-row">
-                    <div class="card chart-card">
-                        <h3>Spending by Category</h3>
-                        <div class="chart-container">
-                            <canvas id="category-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="card chart-card">
-                        <h3>Monthly Trend</h3>
-                        <div class="chart-container">
-                            <canvas id="trend-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Transactions -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Recent Transactions</h3>
-                        <a href="#" id="view-all-transactions" class="link">View All</a>
-                    </div>
-                    <div id="recent-transactions"></div>
-                </div>
-            </div>
-
-            <!-- Transactions View -->
-            <div id="transactions-view" class="view hidden">
-                <div class="view-header">
-                    <h2>Transactions</h2>
-                    <div class="view-actions">
-                        <input type="text" id="search-input" class="search-input" placeholder="Search transactions...">
-                        <button id="export-btn" class="btn btn-secondary">Export CSV</button>
-                        <button id="back-to-dashboard" class="btn btn-ghost">Back to Dashboard</button>
-                    </div>
-                </div>
-                <div id="transactions-table"></div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Upload Modal -->
-    <div id="upload-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Upload CSV</h2>
-                <button class="modal-close" data-modal="upload-modal">&times;</button>
-            </div>
-            <form id="upload-form">
-                <div class="form-group">
-                    <label for="account-select">Account</label>
-                    <select id="account-select" required>
-                        <option value="">Select account...</option>
-                        <option value="checking">Checking</option>
-                        <option value="savings">Savings</option>
-                        <option value="credit">Credit Card</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="csv-file">CSV File</label>
-                    <input type="file" id="csv-file" accept=".csv" required>
-                </div>
-                <div id="upload-status" class="upload-status hidden"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-modal="upload-modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="upload-submit">Upload</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Review Modal -->
-    <div id="review-modal" class="modal hidden">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2>Review Transactions</h2>
-                <button class="modal-close" data-modal="review-modal">&times;</button>
-            </div>
-            <div id="review-list"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-modal="review-modal">Close</button>
-                <button type="button" class="btn btn-primary" id="save-reviews">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Transaction Edit Modal -->
-    <div id="edit-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Edit Transaction</h2>
-                <button class="modal-close" data-modal="edit-modal">&times;</button>
-            </div>
-            <div id="edit-transaction-details"></div>
-            <form id="edit-form">
-                <div class="form-group">
-                    <label for="edit-category">Category</label>
-                    <select id="edit-category"></select>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="create-rule">
-                        Create rule for similar transactions
-                    </label>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-modal="edit-modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2>Settings</h2>
-                <button class="modal-close" data-modal="settings-modal">&times;</button>
-            </div>
-            <div class="settings-tabs">
-                <button class="tab-btn active" data-tab="rules-tab">Categorization Rules</button>
-                <button class="tab-btn" data-tab="budgets-tab">Budgets</button>
-                <button class="tab-btn" data-tab="categories-tab">Categories</button>
-            </div>
-            <div class="settings-content">
-                <div id="rules-tab" class="tab-content active">
-                    <div class="tab-header">
-                        <h3>Categorization Rules</h3>
-                        <button class="btn btn-secondary" id="add-rule-btn">Add Rule</button>
-                    </div>
-                    <div id="rules-list"></div>
-                </div>
-                <div id="budgets-tab" class="tab-content hidden">
-                    <div class="tab-header">
-                        <h3>Monthly Budgets</h3>
-                    </div>
-                    <div id="budgets-list"></div>
-                </div>
-                <div id="categories-tab" class="tab-content hidden">
-                    <div class="tab-header">
-                        <h3>Categories</h3>
-                        <button class="btn btn-secondary" id="add-category-btn">Add Category</button>
-                    </div>
-                    <div id="categories-list"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Category Create/Edit Modal -->
-    <div id="category-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="category-modal-title">Create Category</h2>
-                <button class="modal-close" data-modal="category-modal">&times;</button>
-            </div>
-            <form id="category-form">
-                <div class="form-group">
-                    <label for="category-name">Name</label>
-                    <input type="text" id="category-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="category-type">Type</label>
-                    <select id="category-type" required>
-                        <option value="expense">Expense</option>
-                        <option value="income">Income</option>
-                        <option value="transfer">Transfer</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="category-parent">Parent Category (optional)</label>
-                    <select id="category-parent">
-                        <option value="">None (top-level)</option>
-                    </select>
-                </div>
-                <input type="hidden" id="category-edit-id">
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-modal="category-modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div id="loading" class="loading-overlay hidden">
-        <div class="spinner"></div>
-    </div>
-
-    <!-- Toast Container -->
-    <div id="toast-container"></div>
-
-    <!-- Scripts -->
-    <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/transactions.js"></script>
-    <script src="js/upload.js"></script>
-    <script src="js/app.js"></script>
 </body>
 </html>

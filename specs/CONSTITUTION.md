@@ -1,102 +1,111 @@
-# pfa Constitution
+# Burn Rate Constitution
 
-This document establishes the foundational architectural principles, design philosophy, and decision-making framework for the pfa project.
+This document establishes the foundational architectural principles, design philosophy, and decision-making framework for the Burn Rate project.
 
 ## Project Mission
 
-Personal finance app for tracking spending, budgets, and financial goals
+Burn Rate is a personal finance awareness app that cultivates intuitive understanding of spending patterns through trend visualization and sentiment feedback. It does not enforce budgets — it helps the user find their own equilibrium.
 
 ## Architectural Principles
 
-### 1. Simplicity First
+### 1. Awareness Over Budgeting
+
+**Rationale**: Traditional budgeting creates guilt and anxiety. Burn Rate instead cultivates awareness of spending trends, helping users find sustainable patterns without rigid constraints.
+
+**Implementation**:
+- No budget ceilings or overspend warnings
+- Focus on trend visualization (resolution curves)
+- Sentiment-based feedback shapes targets over time
+- No guilt, no shock — just data to inform intuition
+
+**Trade-offs Accepted**:
+- Less prescriptive than traditional budget apps
+- Requires user engagement with feedback loop
+- Targets emerge over time rather than being set upfront
+
+### 2. Opinion-Based Targeting
+
+**Rationale**: Users know how their spending feels better than any algorithm. Targets should emerge from sentiment feedback, not arbitrary numbers.
+
+**Implementation**:
+- "Good" and "Bad" sentiment feedback after reviewing spending
+- Targets adjust based on weighted moving average when user indicates comfort
+- Two independent tracking groups: Food and Discretionary
+- Recurring expenses segmented and excluded from burn rate
+
+**Trade-offs Accepted**:
+- Requires consistent user feedback to learn targets
+- Initial targets set manually before learning kicks in
+- Less "set and forget" than fixed budget apps
+
+### 3. Three-Component Architecture
+
+**Rationale**: Different interfaces for different contexts — detailed work on desktop, glanceable status on mobile.
+
+**Implementation**:
+- **AWS Backend**: SAM/Lambda/S3/CloudFront — all business logic lives here
+- **Web Frontend**: Vanilla JS, desktop-focused — CSV upload, categorization, sentiment feedback, full dashboard
+- **iOS App**: SwiftUI + WidgetKit, read-only — resolution curves, widgets, trend visualization
+
+**Trade-offs Accepted**:
+- iOS app is a thin client with no data entry
+- Desktop required for transaction management
+- Two codebases to maintain (web + iOS)
+
+### 4. Simplicity First
 
 **Rationale**: Complexity is the enemy of maintainability. Optimize for clarity and ease of understanding.
 
 **Implementation**:
-- File-based data storage (JSON/SQLite) over managed databases where appropriate
-- Static hosting where possible (S3 + CloudFront)
+- SQLite on S3 for data storage
+- Static hosting for web frontend (S3 + CloudFront)
 - Minimal infrastructure to maintain
 - No over-engineering for hypothetical scale
+- Single-user system with password-only auth
 
 **Trade-offs Accepted**:
-- Not designed for massive concurrent usage without explicit scaling work
-- Manual backup responsibility for simple storage
-- Limited to reasonable data volumes for the use case
+- Not designed for multi-user or enterprise use
+- Manual backup responsibility
+- Limited to reasonable data volumes
 
-### 2. Serverless When Dynamic
+### 5. Serverless When Dynamic
 
 **Rationale**: Pay only for what you use, zero server maintenance.
 
 **Implementation**:
-- AWS Lambda for any server-side processing
+- AWS Lambda for all server-side processing
 - API Gateway for API endpoints
-- S3 for static frontend hosting
+- S3 for static frontend hosting and database
 - CloudFront for CDN and HTTPS
 
 **Cost Guardrails**:
 - No always-on compute
-- No provisioned concurrency (unless explicitly needed)
+- No provisioned concurrency
 - Cold starts are acceptable
-- Target: reasonable AWS costs for the scale
-
-### 3. Claude API for Intelligence
-
-**Rationale**: Leverage AI for intelligent features without building complex rules.
-
-**Implementation**:
-- Claude API for AI-powered features
-- Simple rules engine for obvious matches first (reduce API calls)
-- Configurable prompts for domain-specific logic
-- Human review queue for low-confidence items
-
-**Cost Guardrails**:
-- Use Claude Haiku for simple tasks (cheapest)
-- Cache/remember patterns where possible
-- Batch processing where applicable
-
-### 4. Appropriate Access Control
-
-**Rationale**: Security should match the risk profile of the application.
-
-**Implementation**:
-- Authentication method appropriate for the use case
-- Role-based access where needed
-- Secure credential storage
-
-**Trade-offs Accepted**:
-- Complexity should match the security requirements
-- Not every app needs enterprise-grade auth
-
-### 5. Output Formats as First-Class Citizens
-
-**Rationale**: Users need data in formats they can use.
-
-**Implementation**:
-- PDF reports where printable output is needed
-- CSV/Excel exports for data portability
-- Clean, professional formatting
+- Target: < $5/month AWS costs
 
 ### 6. Data Portability
 
-**Rationale**: Data belongs to the users; they should be able to take it anywhere.
+**Rationale**: Data belongs to the user; they should be able to take it anywhere.
 
 **Implementation**:
-- All data exportable in standard formats (CSV, JSON, etc.)
+- CSV import from Bank of America (credit card + checking/savings)
+- All data exportable in standard formats
 - No proprietary formats
+- SQLite database is directly accessible
 - Clear documentation of data structure
-- Easy to migrate to different system if needed
 
 ## Data Principles
 
 ### Data Integrity
-- Data validation at boundaries (input/output)
-- Consistent formats and schemas
-- Clear error handling for invalid data
+- Duplicate detection on CSV import (hash-based)
+- Data validation at API boundaries
+- Consistent schemas across all endpoints
 
 ### Data Access
-- Appropriate access controls
-- Audit trails where required
-- Clear data ownership
+- Password-only authentication with JWT
+- API key or JWT for iOS app
+- No sharing or multi-user access
 
 ## Development Principles
 
@@ -106,47 +115,60 @@ Personal finance app for tracking spending, budgets, and financial goals
 - Implementation follows specs; deviations require spec updates
 
 ### Test Coverage
-- Core business logic must have tests
-- Critical calculations and transformations must be tested
+- Core burn rate calculations must have tests
+- CSV parsing and duplicate detection must be tested
+- API endpoints should have integration tests
 - UI can have lighter test coverage
 
 ### Incremental Delivery
-- Each user story is independently valuable
-- MVP first, then iterate
-- Do not build features "for later"
+- Phase 1: Backend + Web MVP (upload, categorize, list)
+- Phase 2: Categorization engine (rules, review queue)
+- Phase 3: Burn rate + feedback (curves, targets, learning)
+- Phase 4: iOS app + widgets (built separately in Xcode)
+- Phase 5: Polish (alerts, history, export)
 
 ## Technology Constraints
 
 ### Must Use
 - Python 3.12+ for backend
-- AWS for hosting
-- Claude API for AI features
+- AWS SAM for infrastructure
+- SQLite for data storage
+- Vanilla JS for web frontend
+- SwiftUI for iOS app
 
 ### Prefer
-- React or vanilla JS for frontend
-- SQLite or JSON for simple data storage
-- AWS SAM for deployment
+- Chart.js for curve visualization (web)
+- Tabulator.js for data tables (web)
+- WidgetKit for iOS widgets
 
 ### Avoid
-- Heavy frameworks unless justified
-- Managed databases for simple use cases
-- Complex build systems
+- Heavy frameworks (React, Vue) — vanilla JS is sufficient
+- Managed databases — SQLite is sufficient
+- Complex build systems for frontend
 - Dependencies with large footprints
 
 ## Success Metrics
 
-### MVP Success
-- [ ] Core functionality works end-to-end
-- [ ] Users can complete primary workflows
-- [ ] Performance is acceptable
-- [ ] AWS costs are reasonable
+### MVP Success (Phase 1-2)
+- [ ] CSV upload works for both BoA formats
+- [ ] Duplicate detection prevents reimporting
+- [ ] Transactions can be categorized manually
+- [ ] Auto-categorization rules work
+- [ ] Review queue shows uncategorized items
 
-### Full Success
-- [ ] Users can complete tasks efficiently
-- [ ] Error handling is graceful
-- [ ] Documentation is clear
-- [ ] Handoff to new maintainers is straightforward
+### Core Success (Phase 3)
+- [ ] Resolution curves render correctly (5-30 day windows)
+- [ ] Arrows indicate trend direction
+- [ ] Sentiment feedback adjusts targets
+- [ ] Food and Discretionary tracked independently
+
+### Full Success (Phase 4-5)
+- [ ] iOS app displays current burn rate
+- [ ] Widgets show at-a-glance status
+- [ ] Recurring expenses tracked separately
+- [ ] Historical snapshots available
+- [ ] AWS costs under $5/month
 
 ## Revision History
 
-- **{{DATE}}**: Initial constitution established
+- **2026-02-08**: Constitution reset for Burn Rate v2 — awareness over budgeting, three-component architecture, sentiment-based targeting

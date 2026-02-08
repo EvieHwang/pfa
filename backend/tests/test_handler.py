@@ -4,8 +4,6 @@ Tests for the Lambda handler.
 
 import json
 
-import pytest
-
 from src.handler import lambda_handler
 
 
@@ -64,14 +62,13 @@ class TestLambdaHandler:
         response = lambda_handler(event, None)
         assert response["statusCode"] == 200
         body = json.loads(response["body"])
-        assert body["app"] == "PFA"
+        assert body["app"] == "Burn Rate"
 
-    def test_handler_returns_error_for_protected_route(self):
-        """Handler should return 401 or 404 for protected routes without auth."""
+    def test_handler_returns_404_for_unknown_route(self):
+        """Handler should return 404 for unknown routes."""
         event = {"httpMethod": "GET", "path": "/transactions"}
         response = lambda_handler(event, None)
-        # Returns 401 if route registered, 404 if routes failed to load (test env)
-        assert response["statusCode"] in [401, 404]
+        assert response["statusCode"] == 404
         body = json.loads(response["body"])
         assert "error" in body
 
