@@ -59,6 +59,9 @@ dist/
 .aws-sam/
 samconfig.toml
 
+# SQLite database (local dev)
+*.db
+
 # Environment variables
 .env
 .env.local

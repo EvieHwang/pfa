@@ -4,49 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Burn Rate</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #e5e5e5;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-        }
-        h1 {
-            font-size: 3rem;
-            font-weight: 300;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
-        }
-        p {
-            color: #737373;
-            font-size: 1.125rem;
-            max-width: 400px;
-            line-height: 1.6;
-        }
-        .status {
-            margin-top: 2rem;
-            padding: 0.5rem 1rem;
-            background: #1a1a1a;
-            border-radius: 0.5rem;
-            display: inline-block;
-            font-size: 0.875rem;
-            color: #a3a3a3;
-        }
-    </style>
+    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Burn Rate</h1>
-        <p>Personal finance awareness through trend visualization and sentiment feedback.</p>
-        <div class="status">Phase 1 in progress</div>
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content login-box">
+            <h1>Burn Rate</h1>
+            <p class="tagline">Personal finance awareness</p>
+            <form id="login-form">
+                <input type="password" id="password" placeholder="Password" required autofocus>
+                <div id="login-error" class="error hidden"></div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
     </div>
+
+    <!-- Main App -->
+    <div id="app" class="hidden">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">Burn Rate</h1>
+            <div class="header-actions">
+                <button id="upload-btn" class="btn btn-secondary">Upload CSV</button>
+                <button id="logout-btn" class="btn btn-ghost">Logout</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab active" data-view="dashboard">Dashboard</button>
+            <button class="tab" data-view="transactions">Transactions</button>
+            <button class="tab" data-view="review">Review Queue <span id="review-badge" class="badge hidden">0</span></button>
+        </nav>
+
+        <!-- Views -->
+        <main class="main">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view">
+                <div class="dashboard-placeholder">
+                    <h2>Dashboard</h2>
+                    <p>Burn rate curves will appear here after Phase 3.</p>
+                    <p>For now, upload transactions and categorize them.</p>
+                </div>
+            </div>
+
+            <!-- Transactions View -->
+            <div id="transactions-view" class="view hidden">
+                <div class="view-header">
+                    <h2>Transactions</h2>
+                    <div class="filters">
+                        <select id="account-filter">
+                            <option value="">All Accounts</option>
+                        </select>
+                        <select id="category-filter">
+                            <option value="">All Categories</option>
+                        </select>
+                        <input type="date" id="start-date" placeholder="Start Date">
+                        <input type="date" id="end-date" placeholder="End Date">
+                    </div>
+                </div>
+                <div id="transactions-table"></div>
+            </div>
+
+            <!-- Review Queue View -->
+            <div id="review-view" class="view hidden">
+                <div class="view-header">
+                    <h2>Review Queue</h2>
+                    <p class="subtitle">Categorize these transactions</p>
+                </div>
+                <div id="review-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload CSV</h2>
+                <button class="close-btn" data-close="upload-modal">&times;</button>
+            </div>
+            <form id="upload-form">
+                <div class="form-group">
+                    <label for="account-select">Account</label>
+                    <select id="account-select" required>
+                        <option value="">Select account...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="csv-file">CSV File</label>
+                    <input type="file" id="csv-file" accept=".csv" required>
+                </div>
+                <div id="upload-status" class="upload-status hidden"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" data-close="upload-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="upload-submit">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

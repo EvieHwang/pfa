@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  pfa - Personal finance app for tracking spending, budgets, and financial goals
+  Burn Rate - Personal finance awareness through trend visualization and sentiment feedback
 
 Globals:
   Function:
@@ -48,7 +48,7 @@ Resources:
       FunctionName: !Sub "pfa-${Environment}"
       CodeUri: backend/
       Handler: src.handler.lambda_handler
-      Description: "Personal finance app for tracking spending, budgets, and financial goals"
+      Description: "Burn Rate API - spending awareness through trend visualization"
       Policies:
         - Version: '2012-10-17'
           Statement:
