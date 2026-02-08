@@ -1,146 +1,146 @@
 # Burn Rate: Implementation Tasks
 
-## Phase 1 — Backend + Web MVP
+## Phase 1 — Backend + Web MVP ✅
 
 ### 1.1 Infrastructure Setup
-- [ ] Update template.yaml for Burn Rate (rename, update descriptions)
-- [ ] Add SQLite database layer with S3 sync
-- [ ] Create schema.sql with all tables (accounts, transactions, categories, rules, feedback, snapshots)
-- [ ] Seed initial categories (Food subcategories, Discretionary, Recurring, Explosion, Excluded)
-- [ ] Seed initial accounts (Checking, Savings 1, Savings 2, Credit Card)
+- [x] Update template.yaml for Burn Rate (rename, update descriptions)
+- [x] Add SQLite database layer with S3 sync
+- [x] Create schema.sql with all tables (accounts, transactions, categories, rules, feedback, snapshots)
+- [x] Seed initial categories (Food subcategories, Discretionary, Recurring, Explosion, Excluded)
+- [x] Seed initial accounts (Checking, Savings 1, Savings 2, Credit Card)
 
 ### 1.2 Authentication
-- [ ] Implement password-only auth with bcrypt verification
-- [ ] JWT token generation (24h expiry)
-- [ ] Auth middleware for protected routes
-- [ ] POST /auth/login endpoint
+- [x] Implement password-only auth with bcrypt verification
+- [x] JWT token generation (24h expiry)
+- [x] Auth middleware for protected routes
+- [x] POST /auth/login endpoint
 
 ### 1.3 CSV Upload & Parsing
-- [ ] Credit card CSV parser (Posted Date, Reference Number, Payee, Address, Amount)
-- [ ] Checking/savings CSV parser (skip header section, parse Date, Description, Amount, Running Bal.)
-- [ ] Auto-detect CSV format from header row
-- [ ] Duplicate detection: hash-based (reference number for CC, date+amount+desc for checking)
-- [ ] POST /transactions/upload endpoint
-- [ ] Return summary: new count, duplicate count, needs_review count
+- [x] Credit card CSV parser (Posted Date, Reference Number, Payee, Address, Amount)
+- [x] Checking/savings CSV parser (skip header section, parse Date, Description, Amount, Running Bal.)
+- [x] Auto-detect CSV format from header row
+- [x] Duplicate detection: hash-based (reference number for CC, date+amount+desc for checking)
+- [x] POST /transactions/upload endpoint
+- [x] Return summary: new count, duplicate count, needs_review count
 
 ### 1.4 Transaction Management
-- [ ] GET /transactions endpoint with filters (date range, account, category, needs_review)
-- [ ] PUT /transactions/{id}/categorize endpoint
-- [ ] GET /transactions/review-queue endpoint (needs_review=true)
-- [ ] Basic transaction model with all fields from spec
+- [x] GET /transactions endpoint with filters (date range, account, category, needs_review)
+- [x] PUT /transactions/{id}/categorize endpoint
+- [x] GET /transactions/review-queue endpoint (needs_review=true)
+- [x] Basic transaction model with all fields from spec
 
 ### 1.5 Categories API
-- [ ] GET /categories endpoint
-- [ ] Category model with burn_rate_group field
+- [x] GET /categories endpoint
+- [x] Category model with burn_rate_group field
 
 ### 1.6 Web Frontend — Auth
-- [ ] Login page with password field
-- [ ] JWT storage in localStorage
-- [ ] Auth state management
-- [ ] Logout functionality
+- [x] Login page with password field
+- [x] JWT storage in localStorage
+- [x] Auth state management
+- [x] Logout functionality
 
 ### 1.7 Web Frontend — Upload
-- [ ] File picker for CSV
-- [ ] Account selector dropdown
-- [ ] Upload progress/status display
-- [ ] Summary display after upload (new, duplicates, needs review)
+- [x] File picker for CSV
+- [x] Account selector dropdown
+- [x] Upload progress/status display
+- [x] Summary display after upload (new, duplicates, needs review)
 
 ### 1.8 Web Frontend — Transactions
-- [ ] Transaction list table (Tabulator.js)
-- [ ] Date, description, amount, category, account columns
-- [ ] Inline category dropdown for assignment
-- [ ] Filter controls (date range, account, category)
-- [ ] Highlight uncategorized rows
+- [x] Transaction list table (Tabulator.js)
+- [x] Date, description, amount, category, account columns
+- [x] Inline category dropdown for assignment
+- [x] Filter controls (date range, account, category)
+- [x] Highlight uncategorized rows
 
 ---
 
-## Phase 2 — Categorization Engine
+## Phase 2 — Categorization Engine ✅
 
 ### 2.1 Rules System
-- [ ] GET /rules endpoint
-- [ ] POST /rules endpoint (create rule)
-- [ ] PUT /rules/{id} endpoint (update rule)
-- [ ] DELETE /rules/{id} endpoint
-- [ ] Rule model: pattern, category_id, priority, account_filter
+- [x] GET /rules endpoint
+- [x] POST /rules endpoint (create rule)
+- [x] PUT /rules/{id} endpoint (update rule)
+- [x] DELETE /rules/{id} endpoint
+- [x] Rule model: pattern, category_id, priority, account_filter
 
 ### 2.2 Auto-Categorization
-- [ ] Apply rules on CSV upload (priority order, first match wins)
-- [ ] Case-insensitive substring matching
-- [ ] Flag unmatched as needs_review=true
+- [x] Apply rules on CSV upload (priority order, first match wins)
+- [x] Case-insensitive substring matching
+- [x] Flag unmatched as needs_review=true
 
 ### 2.3 Review Queue UI
-- [ ] Dedicated review queue view
-- [ ] Inline category assignment
-- [ ] "Create rule for similar?" prompt after manual categorization
+- [x] Dedicated review queue view
+- [x] Inline category assignment
+- [x] "Create rule for similar?" (auto-creates rule when categorizing)
 - [ ] Batch mode: group similar descriptions
 - [ ] Skip/defer option
 
 ### 2.4 Recurring Detection
-- [ ] Manual flag as recurring
+- [x] Manual flag as recurring (PATCH /transactions/{id}/recurring)
 - [ ] Auto-detect: same payee, similar amount (±10%), monthly cadence
-- [ ] is_recurring field on transactions
+- [x] is_recurring field on transactions
 - [ ] Recurring expenses view (grouped by payee, monthly total)
 
 ### 2.5 Rules Management UI
-- [ ] Rules list in settings
-- [ ] Add/edit/delete rules
+- [x] Rules list in settings
+- [x] Add/edit/delete rules
 - [ ] Priority ordering (drag or manual)
 - [ ] Test rule against existing transactions
 
 ---
 
-## Phase 3 — Burn Rate + Feedback
+## Phase 3 — Burn Rate + Feedback ✅
 
 ### 3.1 Burn Rate Computation
-- [ ] Calculate daily burn rate for windows 5-30 days
-- [ ] Filter by burn_rate_group (food, discretionary)
-- [ ] Exclude recurring, explosion, excluded transactions
+- [x] Calculate daily burn rate for windows 5-30 days
+- [x] Filter by burn_rate_group (food, discretionary)
+- [x] Exclude recurring, explosion, excluded transactions
 - [ ] Cache results in burn_rate_snapshots table
 
 ### 3.2 Target Management
-- [ ] Store targets per burn_rate_group
-- [ ] Initialize with defaults ($30/day food, $20/day discretionary)
-- [ ] Target learning: new_target = (0.8 * old) + (0.2 * current_14day) on "good" feedback
+- [x] Store targets per burn_rate_group
+- [x] Initialize with defaults ($30/day food, $20/day discretionary)
+- [x] Target learning: new_target = (0.8 * old) + (0.2 * current_14day) on "good" feedback
 
 ### 3.3 Burn Rate API
-- [ ] GET /burn-rate endpoint (current curves + arrows for both groups)
+- [x] GET /burn-rate endpoint (current curves + arrows for both groups)
 - [ ] GET /burn-rate/history endpoint (historical snapshots)
-- [ ] Compute arrow direction (slope of resolution curve)
-- [ ] Return deviation from target at each window
+- [x] Compute arrow direction (slope of resolution curve)
+- [x] Return deviation from target at each window
 
 ### 3.4 Sentiment Feedback
-- [ ] POST /feedback endpoint
-- [ ] Store feedback with burn_rate_at_feedback
-- [ ] Trigger target adjustment on "good" feedback
-- [ ] GET /status endpoint (last update, pending review count)
+- [x] POST /feedback endpoint
+- [x] Store feedback with burn_rate_at_feedback
+- [x] Trigger target adjustment on "good" feedback
+- [x] GET /status endpoint (last update, pending review count)
 
 ### 3.5 Dashboard UI
-- [ ] Resolution curve visualization (Chart.js bezier)
-- [ ] Two curves: Food and Discretionary
-- [ ] Target line overlay
-- [ ] Arrow indicators (green/red)
-- [ ] Summary cards (current 14-day burn, target, deviation)
+- [x] Resolution curve visualization (Chart.js bezier)
+- [x] Two curves: Food and Discretionary
+- [x] Target line overlay
+- [x] Arrow indicators (improving/worsening/stable)
+- [x] Summary cards (current 14-day burn, target)
 
 ### 3.6 Sentiment Feedback UI
-- [ ] Post-upload feedback prompt
-- [ ] Show 2-week daily burn rate per category
-- [ ] "How does this feel?" with Good/Bad buttons
-- [ ] Optional — can skip
+- [x] Feedback buttons on dashboard cards
+- [x] Show 14-day daily burn rate per category
+- [x] "Feels Good" / "Too High" buttons
+- [x] Optional — can skip
 
 ### 3.7 Explosion Handling
-- [ ] Mark transaction as "explosion" (one-off large purchase)
-- [ ] Exclude from burn rate calculation
-- [ ] UI to flag/unflag explosions
+- [x] Mark transaction as "explosion" (one-off large purchase)
+- [x] Exclude from burn rate calculation (is_explosion field exists)
+- [x] UI to flag/unflag explosions
 
 ---
 
-## Phase 4 — iOS App + Widget
+## Phase 4 — iOS App + Widget (Separate Xcode Project)
 
 ### 4.1 API Preparation
-- [ ] Ensure /burn-rate returns iOS-friendly format
-- [ ] Ensure /categories returns iOS-friendly format
-- [ ] Ensure /status returns last_updated timestamp
-- [ ] API key or JWT auth for iOS client
+- [x] /burn-rate returns iOS-friendly format
+- [x] /categories returns iOS-friendly format
+- [x] /status returns last_updated timestamp
+- [ ] API key auth for iOS client
 
 ### 4.2 iOS App (SwiftUI) — Built in Xcode
 - [ ] Home screen: two resolution curves stacked
@@ -176,15 +176,15 @@
 - [ ] Download SQLite file option
 
 ### 5.4 Additional Categories
-- [ ] Support adding custom categories
-- [ ] Category hierarchy (parent_id)
-- [ ] Category management UI
+- [x] Support adding custom categories
+- [x] Category hierarchy (parent_id)
+- [x] Category management UI
 
 ### 5.5 UI Polish
-- [ ] Loading states
-- [ ] Error handling and messages
+- [x] Loading states
+- [x] Error handling and messages (toasts)
 - [ ] Mobile-responsive web UI (for occasional phone access)
-- [ ] Dark mode (already default in placeholder)
+- [x] Dark mode (default theme)
 
 ---
 

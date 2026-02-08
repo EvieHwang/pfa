@@ -590,3 +590,68 @@ body {
 .tabulator-cell {
     border-right-color: var(--border);
 }
+
+/* Uncategorized row highlight */
+.tabulator-row.uncategorized-row {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-left: 3px solid var(--danger);
+}
+
+.tabulator-row.uncategorized-row:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Explosion row styling (dimmed) */
+.tabulator-row.explosion-row {
+    opacity: 0.6;
+}
+
+/* Flag buttons in table */
+.flag-btn {
+    cursor: pointer;
+    opacity: 0.3;
+    font-size: 0.875rem;
+    padding: 0 2px;
+    transition: opacity 0.15s;
+}
+
+.flag-btn:hover {
+    opacity: 0.7;
+}
+
+.flag-btn.active {
+    opacity: 1;
+}
+
+/* Category group headers */
+.category-group {
+    margin-bottom: 1.5rem;
+}
+
+.category-group-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+
+/* Form input styling */
+.form-group input[type="text"],
+.form-group input[type="number"] {
+    width: 100%;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+}

@@ -21,6 +21,8 @@ const reviewBadge = document.getElementById('review-badge');
 const loading = document.getElementById('loading');
 const ruleModal = document.getElementById('rule-modal');
 const ruleForm = document.getElementById('rule-form');
+const categoryModal = document.getElementById('category-modal');
+const categoryForm = document.getElementById('category-form');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -65,6 +67,16 @@ function setupEventListeners() {
         showModal('rule-modal');
     });
     ruleForm.addEventListener('submit', handleSaveRule);
+
+    // Category modal
+    document.getElementById('add-category-btn').addEventListener('click', () => {
+        document.getElementById('category-modal-title').textContent = 'Add Category';
+        document.getElementById('category-id').value = '';
+        categoryForm.reset();
+        populateCategoryParentDropdown();
+        showModal('category-modal');
+    });
+    categoryForm.addEventListener('submit', handleSaveCategory);
 
     // Close buttons
     document.querySelectorAll('[data-close]').forEach(btn => {
@@ -236,6 +248,8 @@ function switchView(viewName) {
         loadReviewQueue();
     } else if (viewName === 'rules') {
         loadRules();
+    } else if (viewName === 'categories') {
+        loadCategories();
     }
 }
 
@@ -378,6 +392,17 @@ function renderTransactionsTable(transactions) {
         data: transactions,
         layout: 'fitColumns',
         height: 'calc(100vh - 220px)',
+        rowFormatter: (row) => {
+            const data = row.getData();
+            // Highlight uncategorized rows
+            if (!data.category_id) {
+                row.getElement().classList.add('uncategorized-row');
+            }
+            // Dim explosion rows
+            if (data.is_explosion) {
+                row.getElement().classList.add('explosion-row');
+            }
+        },
         columns: [
             { title: 'Date', field: 'date', width: 100 },
             { title: 'Description', field: 'description', widthGrow: 3 },
@@ -395,6 +420,43 @@ function renderTransactionsTable(transactions) {
             },
             { title: 'Category', field: 'category_name', width: 140 },
             { title: 'Account', field: 'account_name', width: 120 },
+            {
+                title: 'Flags',
+                field: 'is_explosion',
+                width: 80,
+                hozAlign: 'center',
+                formatter: (cell) => {
+                    const data = cell.getRow().getData();
+                    const explosionClass = data.is_explosion ? 'active' : '';
+                    const recurringClass = data.is_recurring ? 'active' : '';
+                    return `<span class="flag-btn explosion-flag ${explosionClass}" title="Explosion (one-off)">💥</span>
+                            <span class="flag-btn recurring-flag ${recurringClass}" title="Recurring">🔄</span>`;
+                },
+                cellClick: async (e, cell) => {
+                    const target = e.target;
+                    const data = cell.getRow().getData();
+
+                    if (target.classList.contains('explosion-flag')) {
+                        try {
+                            const result = await api.toggleExplosion(data.id);
+                            data.is_explosion = result.is_explosion;
+                            cell.getRow().update(data);
+                            showToast(result.is_explosion ? 'Marked as explosion' : 'Unmarked explosion', 'success');
+                        } catch (error) {
+                            showToast(error.message, 'error');
+                        }
+                    } else if (target.classList.contains('recurring-flag')) {
+                        try {
+                            const result = await api.toggleRecurring(data.id);
+                            data.is_recurring = result.is_recurring;
+                            cell.getRow().update(data);
+                            showToast(result.is_recurring ? 'Marked as recurring' : 'Unmarked recurring', 'success');
+                        } catch (error) {
+                            showToast(error.message, 'error');
+                        }
+                    }
+                }
+            },
         ],
     });
 }
@@ -650,6 +712,152 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
+}
+
+// Categories Management
+async function loadCategories() {
+    showLoading();
+    try {
+        const data = await api.getCategories();
+        categories = data.categories;
+        renderCategoriesList(categories);
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderCategoriesList(cats) {
+    const container = document.getElementById('categories-list');
+
+    if (cats.length === 0) {
+        container.innerHTML = '<div class="dashboard-placeholder"><p>No categories yet.</p></div>';
+        return;
+    }
+
+    // Group by burn_rate_group
+    const groups = {};
+    cats.forEach(cat => {
+        if (!groups[cat.burn_rate_group]) {
+            groups[cat.burn_rate_group] = [];
+        }
+        groups[cat.burn_rate_group].push(cat);
+    });
+
+    let html = '';
+    const groupOrder = ['food', 'discretionary', 'recurring', 'explosion', 'excluded'];
+
+    for (const group of groupOrder) {
+        const groupCats = groups[group];
+        if (!groupCats || groupCats.length === 0) continue;
+
+        html += `<div class="category-group">
+            <h3 class="category-group-title">${group.charAt(0).toUpperCase() + group.slice(1)}</h3>`;
+
+        groupCats.forEach(cat => {
+            const parentName = cat.parent_id ? cats.find(c => c.id === cat.parent_id)?.name : null;
+            html += `
+                <div class="rule-item" data-id="${cat.id}">
+                    <div class="rule-item-info">
+                        <span class="rule-item-pattern">${escapeHtml(cat.name)}</span>
+                        ${parentName ? `<div class="rule-item-category">↳ child of ${escapeHtml(parentName)}</div>` : ''}
+                    </div>
+                    <div class="rule-item-actions">
+                        <button class="btn btn-ghost edit-category-btn">Edit</button>
+                        <button class="btn btn-ghost delete-category-btn" style="color: var(--danger)">Delete</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    container.querySelectorAll('.edit-category-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const item = e.target.closest('.rule-item');
+            const cat = cats.find(c => c.id === parseInt(item.dataset.id));
+            openEditCategoryModal(cat);
+        });
+    });
+
+    container.querySelectorAll('.delete-category-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const item = e.target.closest('.rule-item');
+            const catId = parseInt(item.dataset.id);
+
+            if (confirm('Delete this category?')) {
+                try {
+                    await api.deleteCategory(catId);
+                    item.remove();
+                    showToast('Category deleted', 'success');
+                    // Refresh categories list
+                    await loadCategories();
+                    populateCategoryDropdowns();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }
+        });
+    });
+}
+
+function populateCategoryParentDropdown(excludeId = null) {
+    const select = document.getElementById('category-parent');
+    select.innerHTML = '<option value="">None (top-level)</option>';
+
+    categories.forEach(cat => {
+        if (excludeId && cat.id === excludeId) return;
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = `${cat.name} (${cat.burn_rate_group})`;
+        select.appendChild(option);
+    });
+}
+
+function openEditCategoryModal(cat) {
+    document.getElementById('category-modal-title').textContent = 'Edit Category';
+    document.getElementById('category-id').value = cat.id;
+    document.getElementById('category-name').value = cat.name;
+    document.getElementById('category-group').value = cat.burn_rate_group;
+    populateCategoryParentDropdown(cat.id);
+    document.getElementById('category-parent').value = cat.parent_id || '';
+    showModal('category-modal');
+}
+
+async function handleSaveCategory(e) {
+    e.preventDefault();
+
+    const catId = document.getElementById('category-id').value;
+    const name = document.getElementById('category-name').value;
+    const burnRateGroup = document.getElementById('category-group').value;
+    const parentId = document.getElementById('category-parent').value || null;
+
+    showLoading();
+    try {
+        if (catId) {
+            await api.updateCategory(parseInt(catId), {
+                name,
+                burn_rate_group: burnRateGroup,
+                parent_id: parentId ? parseInt(parentId) : null,
+            });
+            showToast('Category updated', 'success');
+        } else {
+            await api.createCategory(name, burnRateGroup, parentId ? parseInt(parentId) : null);
+            showToast('Category created', 'success');
+        }
+        hideModal('category-modal');
+        await loadCategories();
+        populateCategoryDropdowns();
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
 // Utils

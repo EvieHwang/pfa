@@ -67,6 +67,30 @@ class ApiClient {
         return this.request('/categories');
     }
 
+    async createCategory(name, burnRateGroup, parentId = null) {
+        return this.request('/categories', {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                burn_rate_group: burnRateGroup,
+                parent_id: parentId,
+            }),
+        });
+    }
+
+    async updateCategory(categoryId, updates) {
+        return this.request(`/categories/${categoryId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+
+    async deleteCategory(categoryId) {
+        return this.request(`/categories/${categoryId}`, {
+            method: 'DELETE',
+        });
+    }
+
     // Transactions
     async getTransactions(params = {}) {
         const searchParams = new URLSearchParams();
@@ -133,6 +157,13 @@ class ApiClient {
     // Recurring
     async toggleRecurring(transactionId) {
         return this.request(`/transactions/${transactionId}/recurring`, {
+            method: 'PATCH',
+        });
+    }
+
+    // Explosion (one-off large purchases)
+    async toggleExplosion(transactionId) {
+        return this.request(`/transactions/${transactionId}/explosion`, {
             method: 'PATCH',
         });
     }

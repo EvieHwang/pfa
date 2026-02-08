@@ -117,8 +117,20 @@ def lambda_handler(event: dict, context: Any) -> dict:
                     return handle_categorize(event, int(parts[2]))
 
         # Category routes
-        if normalized_path == "/categories" and http_method == "GET":
-            return handle_get_categories(event)
+        if normalized_path == "/categories":
+            if http_method == "GET":
+                return handle_get_categories(event)
+            if http_method == "POST":
+                return handle_create_category(event)
+
+        if normalized_path.startswith("/categories/"):
+            parts = normalized_path.split("/")
+            if len(parts) == 3 and parts[2].isdigit():
+                cat_id = int(parts[2])
+                if http_method == "PUT":
+                    return handle_update_category(event, cat_id)
+                if http_method == "DELETE":
+                    return handle_delete_category(event, cat_id)
 
         # Account routes
         if normalized_path == "/accounts" and http_method == "GET":
@@ -144,11 +156,15 @@ def lambda_handler(event: dict, context: Any) -> dict:
                 if http_method == "DELETE":
                     return handle_delete_rule(event, rule_id)
 
-        # Transaction recurring toggle
+        # Transaction recurring/explosion toggle
         if normalized_path.startswith("/transactions/") and http_method == "PATCH":
             parts = normalized_path.split("/")
-            if len(parts) == 4 and parts[2].isdigit() and parts[3] == "recurring":
-                return handle_toggle_recurring(event, int(parts[2]))
+            if len(parts) == 4 and parts[2].isdigit():
+                txn_id = int(parts[2])
+                if parts[3] == "recurring":
+                    return handle_toggle_recurring(event, txn_id)
+                if parts[3] == "explosion":
+                    return handle_toggle_explosion(event, txn_id)
 
         # Burn rate routes (Phase 3)
         if normalized_path == "/burn-rate" and http_method == "GET":
@@ -420,6 +436,108 @@ def handle_get_categories(event: dict) -> dict:
     return json_response(200, {"categories": database.dicts_from_rows(categories)})
 
 
+def handle_create_category(event: dict) -> dict:
+    """Create a new category."""
+    body = parse_body(event)
+    if not body:
+        return error_response(400, "Request body required")
+
+    name = body.get("name")
+    burn_rate_group = body.get("burn_rate_group")
+    parent_id = body.get("parent_id")
+
+    if not name:
+        return error_response(400, "name required")
+    if burn_rate_group not in ["food", "discretionary", "recurring", "explosion", "excluded"]:
+        return error_response(400, "burn_rate_group must be one of: food, discretionary, recurring, explosion, excluded")
+
+    # Check for duplicate name
+    existing = database.fetchone("SELECT id FROM categories WHERE name = ?", (name,))
+    if existing:
+        return error_response(409, "Category with this name already exists")
+
+    cursor = database.execute(
+        "INSERT INTO categories (name, burn_rate_group, parent_id) VALUES (?, ?, ?)",
+        (name, burn_rate_group, parent_id),
+    )
+
+    database.commit()
+    database.upload_database()
+
+    return json_response(201, {"id": cursor.lastrowid, "success": True})
+
+
+def handle_update_category(event: dict, category_id: int) -> dict:
+    """Update a category."""
+    body = parse_body(event)
+    if not body:
+        return error_response(400, "Request body required")
+
+    # Verify category exists
+    category = database.fetchone("SELECT * FROM categories WHERE id = ?", (category_id,))
+    if not category:
+        return error_response(404, "Category not found")
+
+    name = body.get("name", category["name"])
+    burn_rate_group = body.get("burn_rate_group", category["burn_rate_group"])
+    parent_id = body.get("parent_id", category["parent_id"])
+
+    if burn_rate_group not in ["food", "discretionary", "recurring", "explosion", "excluded"]:
+        return error_response(400, "burn_rate_group must be one of: food, discretionary, recurring, explosion, excluded")
+
+    # Check for duplicate name (excluding self)
+    existing = database.fetchone(
+        "SELECT id FROM categories WHERE name = ? AND id != ?", (name, category_id)
+    )
+    if existing:
+        return error_response(409, "Category with this name already exists")
+
+    database.execute(
+        "UPDATE categories SET name = ?, burn_rate_group = ?, parent_id = ? WHERE id = ?",
+        (name, burn_rate_group, parent_id, category_id),
+    )
+
+    database.commit()
+    database.upload_database()
+
+    return json_response(200, {"success": True})
+
+
+def handle_delete_category(event: dict, category_id: int) -> dict:
+    """Delete a category."""
+    # Verify category exists
+    category = database.fetchone("SELECT * FROM categories WHERE id = ?", (category_id,))
+    if not category:
+        return error_response(404, "Category not found")
+
+    # Check if any transactions use this category
+    txn_count = database.fetchone(
+        "SELECT COUNT(*) as count FROM transactions WHERE category_id = ?", (category_id,)
+    )
+    if txn_count and txn_count["count"] > 0:
+        return error_response(400, f"Cannot delete: {txn_count['count']} transactions use this category")
+
+    # Check if any rules use this category
+    rule_count = database.fetchone(
+        "SELECT COUNT(*) as count FROM rules WHERE category_id = ?", (category_id,)
+    )
+    if rule_count and rule_count["count"] > 0:
+        return error_response(400, f"Cannot delete: {rule_count['count']} rules use this category")
+
+    # Check for child categories
+    child_count = database.fetchone(
+        "SELECT COUNT(*) as count FROM categories WHERE parent_id = ?", (category_id,)
+    )
+    if child_count and child_count["count"] > 0:
+        return error_response(400, f"Cannot delete: {child_count['count']} child categories exist")
+
+    database.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+    database.commit()
+    database.upload_database()
+
+    return json_response(200, {"success": True})
+
+
 def handle_get_accounts(event: dict) -> dict:
     """Get all accounts."""
     accounts = database.fetchall("SELECT * FROM accounts ORDER BY id")
@@ -557,6 +675,24 @@ def handle_toggle_recurring(event: dict, transaction_id: int) -> dict:
     database.upload_database()
 
     return json_response(200, {"is_recurring": bool(new_value)})
+
+
+def handle_toggle_explosion(event: dict, transaction_id: int) -> dict:
+    """Toggle is_explosion flag on a transaction (one-off large purchase)."""
+    txn = database.fetchone("SELECT * FROM transactions WHERE id = ?", (transaction_id,))
+    if not txn:
+        return error_response(404, "Transaction not found")
+
+    new_value = 0 if txn["is_explosion"] else 1
+    database.execute(
+        "UPDATE transactions SET is_explosion = ? WHERE id = ?",
+        (new_value, transaction_id),
+    )
+
+    database.commit()
+    database.upload_database()
+
+    return json_response(200, {"is_explosion": bool(new_value)})
 
 
 # --- Phase 3: Burn Rate ---
