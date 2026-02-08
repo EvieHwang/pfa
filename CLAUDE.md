@@ -28,12 +28,10 @@ aws cloudfront *
 aws dynamodb *
 aws sts *
 
-# AWS SAM
+# AWS SAM (build/validate only - deploy happens via GitHub Actions)
 sam build *
-sam deploy *
 sam local *
 sam validate *
-sam package *
 
 # Git operations
 git add *
@@ -80,34 +78,60 @@ source *
 chmod *
 ```
 
+## Git and Deployment Workflow
+
+**CRITICAL: All deployments happen via GitHub Actions, not locally.**
+
+### The Standard Workflow
+
+1. **Make changes** - Edit files as needed
+2. **Commit to main** - Create descriptive commits directly on main branch
+3. **Push to remote** - Push commits to GitHub
+4. **GitHub Actions deploys** - CI runs tests, then deploy workflow handles SAM deploy automatically
+
+### Rules
+
+- **NEVER run `sam deploy` locally** - GitHub Actions handles all deployments after push to main
+- **NEVER deploy uncommitted changes** - All changes must be committed and pushed first
+- **Commit directly to main** - No feature branches needed for personal projects (simpler workflow)
+- **Push triggers deploy** - Once you push to main, deployment is automatic
+
+### Why This Matters
+
+Local `sam deploy` creates drift between git history and deployed state. By forcing all deploys through GitHub Actions:
+- Git history always matches what's deployed
+- No "I deployed but forgot to commit" situations
+- Consistent deploy process regardless of which machine/terminal you're using
+
+### Exceptions
+
+Only run `sam deploy` locally if:
+- Explicitly asked to debug a deployment issue
+- GitHub Actions is broken and user requests manual deploy
+- Initial project setup before GitHub Actions is configured
+
+In these cases, always commit and push the changes BEFORE deploying.
+
 ## Autonomous Operations (No Approval Required)
 
 ### Git Operations
-- **Create feature branches**: Create branches from main for all feature work
-- **Commit to branches**: Create commits with descriptive messages on feature branches
-- **Push to remote**: Push feature branches to GitHub remote repository
-- **Create PRs**: Open pull requests for all changes targeting main
-- **Do not merge PRs**: Leave PRs open for human review unless explicitly instructed
-- **Do not push to main**: All changes to main must go through approved PRs. Never push directly to main.
+- **Commit to main**: Create commits with descriptive messages directly on main branch
+- **Push to remote**: Push commits to GitHub (this triggers deployment)
+- **Create branches**: Only if explicitly requested or for complex multi-step work
 
-### Development and Deployment
-- **Build and test**: Run build processes, test suites, and validation scripts
+### Build and Test
+- **Run builds**: Execute `sam build`, `npm run build`, etc. for validation
+- **Run tests**: Execute test suites before committing
 - **Install dependencies**: Add, update, or remove project dependencies as needed
-- **Deployment is automatic**: GitHub Actions deploys to AWS when PRs are merged to main. Do NOT run `sam deploy` manually unless explicitly asked by the user.
 
-### AWS Operations
-- **SAM build/deploy**: Run `sam build` and `sam deploy` for Lambda deployments
-- **S3 sync**: Upload files to S3 buckets
-- **S3 bucket creation**: Create new S3 buckets for hosting or storage
-- **S3 website configuration**: Enable static website hosting on S3 buckets
-- **CloudFormation operations**: Create/update stacks via SAM
-- **Lambda updates**: Deploy new versions of Lambda functions
-- **API Gateway**: Create and configure API Gateway endpoints
+### AWS Operations (Read/Validate Only)
+- **SAM build**: Run `sam build` to validate templates
+- **SAM validate**: Check template syntax
+- **S3 sync**: Upload files to S3 buckets (for non-CloudFront static assets)
 
 ### GitHub Integration
 - **Read issues**: Fetch issue details for implementation specs
 - **Update issues**: Close issues, add comments, update labels
-- **Create branches**: Create feature branches from issues
 
 ### File Operations
 - **Create files**: Generate new source files, tests, documentation, or specs
@@ -176,6 +200,52 @@ The GitHub Actions workflow automatically sets `DomainName` to `{repo-name}.eveh
 - If `DomainName` is empty, the template falls back to the CloudFront domain (e.g., `d123.cloudfront.net`)
 - Domain can be overridden if you want something other than the repo name
 
+## Aerie Skills Integration
+
+This project has access to shared skills hosted on Aerie (`https://aerie.evehwang.com/`). Skills provide reusable knowledge like design systems, evaluation frameworks, and architectural patterns.
+
+### When to Check Aerie
+
+**Fetch the skills manifest at the start of any planning session:**
+- Beginning work on a new feature or spec
+- Starting architectural or design decisions
+- When the task could benefit from established patterns
+
+### How to Use Aerie
+
+1. **Fetch the manifest** to discover available skills:
+   ```
+   GET https://aerie.evehwang.com/manifest.json
+   ```
+
+2. **Assess relevance** by reading skill descriptions in the manifest. Determine which skills apply to the current task (e.g., `design-system` for UI work, `ai-evaluation` for AI features).
+
+3. **Retrieve relevant skills** by fetching the full documentation:
+   ```
+   GET https://aerie.evehwang.com/skills/{skill-id}.md
+   ```
+
+4. **Apply the guidance** from retrieved skills throughout implementation.
+
+### Skill Memory
+
+After accessing skills, remember what was retrieved so you can:
+- Reference the same guidance in subsequent iterations
+- Maintain consistency across the implementation
+- Avoid redundant fetches within the same work session
+
+If a skill was accessed earlier in the conversation, use that cached knowledge rather than re-fetching.
+
+### Available Skills
+
+Skills are maintained centrally and may include:
+- **design-system**: Information-dense UI patterns with React, Tailwind, shadcn/ui
+- **ai-evaluation**: Tracing and evaluation patterns for AI agents
+
+Check the manifest for the current list—new skills may be added over time.
+
+---
+
 ## Spec-Driven Workflow
 
 This project uses a specification-driven development approach. Features live in the `/specs` directory.
@@ -186,7 +256,7 @@ This project uses a specification-driven development approach. Features live in 
 2. **Planning Phase**: Create `plan.md` with architecture, phases, deployment strategy
 3. **Task Breakdown**: Generate `tasks.md` with detailed tasks, dependencies, parallelization opportunities
 4. **Implementation Phase**: Execute tasks following the plan, with tests at each phase
-5. **Deployment**: Use SAM for infrastructure, git for version control, create PRs for review
+5. **Commit and Push**: Commit changes to main and push to trigger deployment
 
 ### When to Use Full Spec Workflow
 
@@ -222,13 +292,13 @@ specs/
 
 ## Development Philosophy
 
-- **Ship early, ship often**: Create PRs frequently for review. This does NOT mean bypassing review or pushing directly to main.
+- **Ship early, ship often**: Bias toward action and deployment
 - **Prototype mindset**: Optimize for learning and iteration, not perfection
 - **Descriptive commits**: Write clear commit messages that explain *why* not just *what*
 - **Spec-driven**: Specifications guide implementation; diverge only with good reason
 - **Cost-conscious**: Keep AWS costs minimal, use Claude Haiku where possible
 - **Self-documenting**: Code and commits should tell the story
-- **Run autonomously**: Don't stop to ask permission for routine operations (but always use PRs for code changes)
+- **Run autonomously**: Don't stop to ask permission for routine operations
 
 ## Communication Style
 
@@ -319,106 +389,9 @@ Example issue to avoid:
 # GOOD: from src.handler import lambda_handler
 ```
 
-### SAM Deployment
-
-**Always use `--resolve-s3` flag** when deploying with SAM to auto-create the deployment bucket:
-
-```bash
-sam deploy \
-  --stack-name pfa \
-  --capabilities CAPABILITY_IAM \
-  --resolve-s3 \
-  --parameter-overrides DomainName=pfa.evehwang.com
-```
-
-**Use consistent stack naming**: The stack name is `pfa` (matching the repo name). Always use this name in:
-- `sam deploy --stack-name pfa`
-- CloudFormation queries
-- GitHub Actions workflows
-
-**Never use a different stack name** (e.g., `pfa-stack`) as this creates orphaned resources.
-
-### Frontend Types
-
-This project supports two frontend types:
-
-1. **Build-based** (React/Vite):
-   - Has `package.json` with `"build"` script AND `package-lock.json`
-   - Deploys from `dist/` after npm build
-
-2. **Static** (Vanilla JS):
-   - No build step needed
-   - Deploys files directly from `frontend/`
-   - May have `package.json` but no `package-lock.json`
-
-**Important**: CI/CD workflows detect build-based frontends by checking for BOTH:
-- `package.json` with a `"build"` script
-- `package-lock.json` file
-
-If you have a static frontend with a leftover `package.json` (from template), the workflow will correctly skip the build step as long as there's no `package-lock.json`.
-
-## CI/CD Workflow Guidelines
-
-### Workflow Debugging
-
-When CI/CD fails:
-1. Run `gh run view <run-id> --log-failed` to see error details
-2. Check if it's a code issue (linting, tests) or infrastructure issue (permissions)
-3. For permission errors, check AWS IAM policies for the `github-actions-wm2` user
-
-### Required AWS Permissions
-
-The GitHub Actions user needs these CloudFormation permissions for SAM deploy:
-- `cloudformation:CreateChangeSet`
-- `cloudformation:CreateStack`
-- `cloudformation:DeleteChangeSet`
-- `cloudformation:DescribeChangeSet`
-- `cloudformation:DescribeStackEvents`
-- `cloudformation:DescribeStacks`
-- `cloudformation:ExecuteChangeSet`
-- `cloudformation:GetTemplate`
-- `cloudformation:GetTemplateSummary`
-- `cloudformation:ListStackResources`
-- `cloudformation:UpdateStack`
-- `cloudformation:ValidateTemplate`
-
-## Post-Merge Deployment Monitoring
-
-**After any PR is approved and merged, always verify the deployment succeeded:**
-
-1. Wait 60 seconds for GitHub Actions to start
-2. Check workflow status: `gh run list --limit 5`
-3. If deploy shows `failure`:
-   - Investigate: `gh run view <run-id> --log-failed`
-   - Fix the issue immediately
-   - Add a one-line entry to the "Deployment Failure Log" below
-4. If deploy shows `success`:
-   - Verify the app works: `curl -s https://pfa.evehwang.com/api/health`
-
 ## Active Technologies
 
 - Python 3.12+ (Lambda runtime)
 - Claude API (Anthropic SDK) for AI features
 - AWS Lambda, API Gateway, S3, CloudFront
 - AWS SAM for deployment
-
-## Quick Reference: CI/CD Failure Fixes
-
-When a deployment fails, find the error in this table and apply the fix:
-
-| Error Pattern | Fix | Details In |
-|---------------|-----|------------|
-| Import sorting / `I001` | `ruff check backend/src/ --fix` | Pre-Commit Checklist |
-| `typing.Tuple` deprecated | Use `tuple` not `Tuple` | Python Code Style |
-| Bare `except:` | Use `except (TypeError, ValueError):` | Python Code Style |
-| Test import error | Update test imports after refactoring | Test Maintenance |
-| npm cache / package-lock | Workflow auto-detects; ensure no stale lock file | Frontend Types |
-| SAM S3 bucket error | Add `--resolve-s3` flag | SAM Deployment |
-| Stack name mismatch | Always use `pfa` as stack name | SAM Deployment |
-| CloudFormation AccessDenied | Add IAM permissions to github-actions user | Required AWS Permissions |
-
-## Deployment Failure Log
-
-One-line entries for historical tracking. Detailed fixes are in the sections referenced above.
-
-- **2026-01-24**: Python linting (ruff), SAM --resolve-s3, stack name mismatch, npm cache error, test imports, IAM permissions
