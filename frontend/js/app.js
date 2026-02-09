@@ -378,36 +378,36 @@ function renderTransactionsTable(transactions) {
                 title: 'Category',
                 field: 'category_id',
                 width: 140,
-                formatter: (cell) => {
+                formatter: (cell, formatterParams, onRendered) => {
                     const data = cell.getRow().getData();
                     const catId = data.category_id;
                     let html = `<select class="inline-category-select" data-txn-id="${data.id}">`;
-                    html += '<option value="">Uncategorized</option>';
-                    html += renderCategoryOptions();
+                    html += `<option value="" ${!catId ? 'selected' : ''}>Uncategorized</option>`;
+                    categories.forEach(cat => {
+                        const selected = catId === cat.id ? 'selected' : '';
+                        html += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+                    });
                     html += '</select>';
+
+                    onRendered(() => {
+                        const select = cell.getElement().querySelector('.inline-category-select');
+                        if (select) {
+                            select.addEventListener('change', async (e) => {
+                                const txnId = parseInt(e.target.dataset.txnId);
+                                const categoryId = e.target.value ? parseInt(e.target.value) : null;
+                                try {
+                                    await api.categorize(txnId, categoryId, false);
+                                    data.category_id = categoryId;
+                                    data.category_name = categoryId ? categories.find(c => c.id === categoryId)?.name : null;
+                                    showToast('Category updated', 'success');
+                                } catch (error) {
+                                    showToast(error.message, 'error');
+                                }
+                            });
+                        }
+                    });
+
                     return html;
-                },
-                cellRendered: (cell) => {
-                    const select = cell.getElement().querySelector('.inline-category-select');
-                    if (select) {
-                        const data = cell.getRow().getData();
-                        console.log('Transaction:', data.id, 'category_id:', data.category_id, 'options:', Array.from(select.options).map(o => o.value));
-                        select.value = data.category_id ? String(data.category_id) : '';
-                        console.log('Set select.value to:', select.value, 'selectedIndex:', select.selectedIndex);
-                        select.addEventListener('change', async (e) => {
-                            const txnId = parseInt(e.target.dataset.txnId);
-                            const categoryId = e.target.value ? parseInt(e.target.value) : null;
-                            try {
-                                await api.categorize(txnId, categoryId, false);
-                                data.category_id = categoryId;
-                                data.category_name = categoryId ? categories.find(c => c.id === categoryId)?.name : null;
-                                cell.getRow().update(data);
-                                showToast('Category updated', 'success');
-                            } catch (error) {
-                                showToast(error.message, 'error');
-                            }
-                        });
-                    }
                 }
             },
             { title: 'Account', field: 'account_name', width: 120 },
