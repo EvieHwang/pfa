@@ -361,13 +361,18 @@ function renderTransactionsTable(transactions) {
         height: 'calc(100vh - 220px)',
         rowFormatter: (row) => {
             const data = row.getData();
+            const el = row.getElement();
             // Highlight uncategorized rows
             if (!data.category_id) {
-                row.getElement().classList.add('uncategorized-row');
+                el.classList.add('uncategorized-row');
+            } else {
+                el.classList.remove('uncategorized-row');
             }
             // Dim explosion rows
             if (data.is_explosion) {
-                row.getElement().classList.add('explosion-row');
+                el.classList.add('explosion-row');
+            } else {
+                el.classList.remove('explosion-row');
             }
         },
         columns: [
@@ -402,7 +407,7 @@ function renderTransactionsTable(transactions) {
                     const select = cell.getElement().querySelector('.inline-category-select');
                     if (select) {
                         const data = cell.getRow().getData();
-                        select.value = data.category_id || '';
+                        select.value = data.category_id ? String(data.category_id) : '';
                         select.addEventListener('change', async (e) => {
                             const txnId = parseInt(e.target.dataset.txnId);
                             const categoryId = e.target.value ? parseInt(e.target.value) : null;
