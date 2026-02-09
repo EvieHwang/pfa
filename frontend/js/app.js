@@ -359,22 +359,6 @@ function renderTransactionsTable(transactions) {
         data: transactions,
         layout: 'fitColumns',
         height: 'calc(100vh - 220px)',
-        rowFormatter: (row) => {
-            const data = row.getData();
-            const el = row.getElement();
-            // Highlight uncategorized rows
-            if (!data.category_id) {
-                el.classList.add('uncategorized-row');
-            } else {
-                el.classList.remove('uncategorized-row');
-            }
-            // Dim explosion rows
-            if (data.is_explosion) {
-                el.classList.add('explosion-row');
-            } else {
-                el.classList.remove('explosion-row');
-            }
-        },
         columns: [
             { title: 'Date', field: 'date', width: 100 },
             { title: 'Description', field: 'description', widthGrow: 3 },
@@ -407,7 +391,9 @@ function renderTransactionsTable(transactions) {
                     const select = cell.getElement().querySelector('.inline-category-select');
                     if (select) {
                         const data = cell.getRow().getData();
+                        console.log('Transaction:', data.id, 'category_id:', data.category_id, 'options:', Array.from(select.options).map(o => o.value));
                         select.value = data.category_id ? String(data.category_id) : '';
+                        console.log('Set select.value to:', select.value, 'selectedIndex:', select.selectedIndex);
                         select.addEventListener('change', async (e) => {
                             const txnId = parseInt(e.target.dataset.txnId);
                             const categoryId = e.target.value ? parseInt(e.target.value) : null;
