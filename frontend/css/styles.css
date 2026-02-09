@@ -574,13 +574,22 @@ body {
 
 /* Tabulator overrides for dark theme */
 .tabulator {
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: var(--radius);
 }
 
 .tabulator-row {
+    background: var(--bg-primary) !important;
     border-bottom-color: var(--border);
+}
+
+.tabulator-row.tabulator-row-odd {
+    background: var(--bg-primary) !important;
+}
+
+.tabulator-row.tabulator-row-even {
+    background: var(--bg-primary) !important;
 }
 
 .tabulator-row:hover {
@@ -589,25 +598,6 @@ body {
 
 .tabulator-cell {
     border-right-color: var(--border);
-}
-
-/* Uncategorized row highlight - subtle dark red tint */
-.tabulator-row.uncategorized-row {
-    background: rgba(180, 40, 40, 0.15) !important;
-    border-left: 2px solid rgba(180, 40, 40, 0.5);
-}
-
-.tabulator-row.uncategorized-row:hover {
-    background: rgba(180, 40, 40, 0.25) !important;
-}
-
-/* Explosion row styling - subtle dark tint */
-.tabulator-row.explosion-row {
-    background: rgba(80, 80, 80, 0.3) !important;
-}
-
-.tabulator-row.explosion-row:hover {
-    background: rgba(80, 80, 80, 0.4) !important;
 }
 
 /* Flag buttons in table */
