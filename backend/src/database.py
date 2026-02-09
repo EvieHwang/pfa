@@ -76,6 +76,11 @@ def sync_from_s3() -> None:
         _connection.close()
         _connection = None
 
+    # Delete local file to ensure fresh download
+    db_path = get_db_path()
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
     # Always download fresh copy from S3
     download_database()
 
