@@ -227,11 +227,12 @@ def handle_upload(event: dict) -> dict:
     if not body:
         return error_response(400, "Request body required")
 
-    account_id = body.get("account_id")
+    # Default to Credit Card (account_id=4) if not provided
+    account_id = body.get("account_id", 4)
     csv_content = body.get("csv_content")
 
-    if not account_id or not csv_content:
-        return error_response(400, "account_id and csv_content required")
+    if not csv_content:
+        return error_response(400, "csv_content required")
 
     # Verify account exists
     account = database.fetchone(
@@ -741,18 +742,21 @@ def handle_toggle_explosion(event: dict, transaction_id: int) -> dict:
 
 
 def handle_get_burn_rate(event: dict) -> dict:
-    """Get current burn rate curves for both groups."""
+    """Get current burn rate curves for all groups (food, discretionary, explosion)."""
     from datetime import datetime, timedelta
 
     today = datetime.now().date()
     result = {}
 
-    for group in ["food", "discretionary"]:
-        # Get target
-        target_row = database.fetchone(
-            "SELECT daily_target FROM targets WHERE burn_rate_group = ?", (group,)
-        )
-        target = float(target_row["daily_target"]) if target_row else 0
+    for group in ["food", "discretionary", "explosion"]:
+        # Get target (explosion has no target)
+        if group == "explosion":
+            target = 0
+        else:
+            target_row = database.fetchone(
+                "SELECT daily_target FROM targets WHERE burn_rate_group = ?", (group,)
+            )
+            target = float(target_row["daily_target"]) if target_row else 0
 
         # Get category IDs for this group
         categories = database.fetchall(
@@ -771,19 +775,32 @@ def handle_get_burn_rate(event: dict) -> dict:
             end_date = today.isoformat()
 
             # Sum expenses in this window (negative amounts = expenses)
+            # For explosion, we don't filter out is_explosion flag
             placeholders = ",".join("?" * len(cat_ids))
-            row = database.fetchone(
-                f"""
-                SELECT COALESCE(SUM(ABS(amount)), 0) as total
-                FROM transactions
-                WHERE category_id IN ({placeholders})
-                AND date >= ? AND date <= ?
-                AND is_recurring = 0
-                AND is_explosion = 0
-                AND amount < 0
-                """,
-                (*cat_ids, start_date, end_date),
-            )
+            if group == "explosion":
+                row = database.fetchone(
+                    f"""
+                    SELECT COALESCE(SUM(ABS(amount)), 0) as total
+                    FROM transactions
+                    WHERE category_id IN ({placeholders})
+                    AND date >= ? AND date <= ?
+                    AND amount < 0
+                    """,
+                    (*cat_ids, start_date, end_date),
+                )
+            else:
+                row = database.fetchone(
+                    f"""
+                    SELECT COALESCE(SUM(ABS(amount)), 0) as total
+                    FROM transactions
+                    WHERE category_id IN ({placeholders})
+                    AND date >= ? AND date <= ?
+                    AND is_recurring = 0
+                    AND is_explosion = 0
+                    AND amount < 0
+                    """,
+                    (*cat_ids, start_date, end_date),
+                )
 
             total = float(row["total"]) if row else 0
             daily_rate = total / window
@@ -797,22 +814,28 @@ def handle_get_burn_rate(event: dict) -> dict:
 
         # Compute arrow (slope of last 5 points)
         if len(curve) >= 5:
-            recent = [p["deviation"] for p in curve[-5:]]
+            recent = [p["daily_rate"] for p in curve[-5:]]
             slope = (recent[-1] - recent[0]) / 4
             if slope < -1:
-                arrow = "improving"  # Converging toward target
+                arrow = "improving"  # Spending trending down
             elif slope > 1:
-                arrow = "worsening"  # Diverging from target
+                arrow = "worsening"  # Spending trending up
             else:
                 arrow = "stable"
         else:
             arrow = "neutral"
+
+        # Calculate 30-day total for explosion
+        total_30day = 0
+        if group == "explosion" and len(curve) > 0:
+            total_30day = round(curve[-1]["daily_rate"] * 30, 2)
 
         result[group] = {
             "curve": curve,
             "target": target,
             "arrow": arrow,
             "current_14day": curve[9]["daily_rate"] if len(curve) > 9 else 0,  # 14-day is index 9
+            "total_30day": total_30day,
         }
 
     return json_response(200, result)

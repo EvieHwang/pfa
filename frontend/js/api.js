@@ -112,10 +112,10 @@ class ApiClient {
         });
     }
 
-    async upload(accountId, csvContent) {
+    async upload(csvContent) {
         return this.request('/transactions/upload', {
             method: 'POST',
-            body: JSON.stringify({ account_id: accountId, csv_content: csvContent }),
+            body: JSON.stringify({ csv_content: csvContent }),
         });
     }
 

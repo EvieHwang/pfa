@@ -36,10 +36,8 @@
         <!-- Navigation Tabs -->
         <nav class="nav-tabs">
             <button class="tab active" data-view="dashboard">Dashboard</button>
-            <button class="tab" data-view="transactions">Transactions</button>
-            <button class="tab" data-view="review">Review Queue <span id="review-badge" class="badge hidden">0</span></button>
+            <button class="tab" data-view="transactions">Transactions <span id="review-badge" class="badge hidden">0</span></button>
             <button class="tab" data-view="rules">Rules</button>
-            <button class="tab" data-view="categories">Categories</button>
         </nav>
 
         <!-- Views -->
@@ -48,7 +46,7 @@
             <div id="dashboard-view" class="view">
                 <div class="burn-rate-cards">
                     <!-- Food Card -->
-                    <div class="burn-rate-card" id="food-card">
+                    <div class="burn-rate-card food-card" id="food-card">
                         <div class="card-header">
                             <h3>Food</h3>
                             <span class="arrow" id="food-arrow"></span>
@@ -67,13 +65,13 @@
                             <canvas id="food-chart"></canvas>
                         </div>
                         <div class="feedback-buttons">
-                            <button class="btn btn-good" data-group="food" data-sentiment="good">Feels Good</button>
-                            <button class="btn btn-bad" data-group="food" data-sentiment="bad">Too High</button>
+                            <button class="btn btn-good" data-group="food" data-sentiment="good">Loosen Up</button>
+                            <button class="btn btn-bad" data-group="food" data-sentiment="bad">Tighten Up</button>
                         </div>
                     </div>
 
                     <!-- Discretionary Card -->
-                    <div class="burn-rate-card" id="discretionary-card">
+                    <div class="burn-rate-card discretionary-card" id="discretionary-card">
                         <div class="card-header">
                             <h3>Discretionary</h3>
                             <span class="arrow" id="discretionary-arrow"></span>
@@ -92,8 +90,39 @@
                             <canvas id="discretionary-chart"></canvas>
                         </div>
                         <div class="feedback-buttons">
-                            <button class="btn btn-good" data-group="discretionary" data-sentiment="good">Feels Good</button>
-                            <button class="btn btn-bad" data-group="discretionary" data-sentiment="bad">Too High</button>
+                            <button class="btn btn-good" data-group="discretionary" data-sentiment="good">Loosen Up</button>
+                            <button class="btn btn-bad" data-group="discretionary" data-sentiment="bad">Tighten Up</button>
+                        </div>
+                    </div>
+
+                    <!-- Explosion Card -->
+                    <div class="burn-rate-card explosion-card" id="explosion-card">
+                        <div class="card-header">
+                            <h3>Explosions</h3>
+                            <span class="arrow" id="explosion-arrow"></span>
+                        </div>
+                        <div class="card-stats">
+                            <div class="stat">
+                                <span class="stat-value" id="explosion-current">$0</span>
+                                <span class="stat-label">14-day avg</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="explosion-total">$0</span>
+                                <span class="stat-label">30-day total</span>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="explosion-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Combined Chart Card -->
+                    <div class="burn-rate-card combined-card" id="combined-card">
+                        <div class="card-header">
+                            <h3>All Spending</h3>
+                        </div>
+                        <div class="chart-container chart-container-large">
+                            <canvas id="combined-chart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -104,9 +133,6 @@
                 <div class="view-header">
                     <h2>Transactions</h2>
                     <div class="filters">
-                        <select id="account-filter">
-                            <option value="">All Accounts</option>
-                        </select>
                         <select id="category-filter">
                             <option value="">All Categories</option>
                         </select>
@@ -115,23 +141,6 @@
                     </div>
                 </div>
                 <div id="transactions-table"></div>
-            </div>
-
-            <!-- Review Queue View -->
-            <div id="review-view" class="view hidden">
-                <div class="view-header">
-                    <h2>Review Queue</h2>
-                    <p class="subtitle">Categorize these transactions</p>
-                    <div class="filters">
-                        <label>Sort by:</label>
-                        <select id="review-sort">
-                            <option value="description">Description</option>
-                            <option value="date">Date</option>
-                            <option value="amount">Amount</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="review-list"></div>
             </div>
 
             <!-- Rules View -->
@@ -143,14 +152,6 @@
                 <div id="rules-list"></div>
             </div>
 
-            <!-- Categories View -->
-            <div id="categories-view" class="view hidden">
-                <div class="view-header">
-                    <h2>Categories</h2>
-                    <p class="subtitle">5 fixed categories for burn rate tracking</p>
-                </div>
-                <div id="categories-list"></div>
-            </div>
         </main>
     </div>
 
@@ -163,13 +164,7 @@
             </div>
             <form id="upload-form">
                 <div class="form-group">
-                    <label for="account-select">Account</label>
-                    <select id="account-select" required>
-                        <option value="">Select account...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="csv-file">CSV File</label>
+                    <label for="csv-file">Credit Card CSV File</label>
                     <input type="file" id="csv-file" accept=".csv" required>
                 </div>
                 <div id="upload-status" class="upload-status hidden"></div>

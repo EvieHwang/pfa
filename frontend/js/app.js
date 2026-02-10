@@ -3,11 +3,12 @@
  */
 
 // State
-let accounts = [];
 let categories = [];
 let transactionsTable = null;
 let foodChart = null;
 let discretionaryChart = null;
+let explosionChart = null;
+let combinedChart = null;
 
 // DOM Elements
 const loginModal = document.getElementById('login-modal');
@@ -72,7 +73,6 @@ function setupEventListeners() {
     });
 
     // Filters
-    document.getElementById('account-filter').addEventListener('change', loadTransactions);
     document.getElementById('category-filter').addEventListener('change', loadTransactions);
     document.getElementById('start-date').addEventListener('change', loadTransactions);
     document.getElementById('end-date').addEventListener('change', loadTransactions);
@@ -81,9 +81,6 @@ function setupEventListeners() {
     document.querySelectorAll('.feedback-buttons button').forEach(btn => {
         btn.addEventListener('click', handleFeedback);
     });
-
-    // Review queue sort
-    document.getElementById('review-sort').addEventListener('change', loadReviewQueue);
 }
 
 // Auth
@@ -125,38 +122,15 @@ function showApp() {
 
 // Data loading
 async function loadInitialData() {
-    const [accountsData, categoriesData, statusData] = await Promise.all([
-        api.getAccounts(),
+    const [categoriesData, statusData] = await Promise.all([
         api.getCategories(),
         api.getStatus(),
     ]);
 
-    accounts = accountsData.accounts;
     categories = categoriesData.categories;
 
-    populateAccountDropdowns();
     populateCategoryDropdowns();
     updateReviewBadge(statusData.pending_review_count);
-}
-
-function populateAccountDropdowns() {
-    const selects = [
-        document.getElementById('account-select'),
-        document.getElementById('account-filter'),
-    ];
-
-    selects.forEach(select => {
-        const firstOption = select.options[0];
-        select.innerHTML = '';
-        select.appendChild(firstOption);
-
-        accounts.forEach(account => {
-            const option = document.createElement('option');
-            option.value = account.id;
-            option.textContent = account.name;
-            select.appendChild(option);
-        });
-    });
 }
 
 function populateCategoryDropdowns() {
@@ -211,12 +185,8 @@ function switchView(viewName) {
         loadDashboard();
     } else if (viewName === 'transactions') {
         loadTransactions();
-    } else if (viewName === 'review') {
-        loadReviewQueue();
     } else if (viewName === 'rules') {
         loadRules();
-    } else if (viewName === 'categories') {
-        loadCategories();
     }
 }
 
@@ -225,8 +195,10 @@ async function loadDashboard() {
     showLoading();
     try {
         const data = await api.getBurnRate();
-        renderBurnRateCard('food', data.food);
-        renderBurnRateCard('discretionary', data.discretionary);
+        renderBurnRateCard('food', data.food, '#3b82f6');
+        renderBurnRateCard('discretionary', data.discretionary, '#8b5cf6');
+        renderBurnRateCard('explosion', data.explosion, '#f97316');
+        renderCombinedChart(data);
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
@@ -234,18 +206,61 @@ async function loadDashboard() {
     }
 }
 
-function renderBurnRateCard(group, data) {
-    // Update stats
-    document.getElementById(`${group}-current`).textContent = `$${data.current_14day.toFixed(0)}/day`;
-    document.getElementById(`${group}-target`).textContent = `$${data.target.toFixed(0)}/day`;
+// Color mapping for charts
+const chartColors = {
+    food: '#3b82f6',
+    discretionary: '#8b5cf6',
+    explosion: '#f97316'
+};
 
-    // Update arrow
+function renderBurnRateCard(group, data, color) {
+    if (!data) return;
+
+    // Update stats
+    const currentEl = document.getElementById(`${group}-current`);
+    const targetEl = document.getElementById(`${group}-target`);
+
+    if (currentEl) {
+        currentEl.textContent = `$${data.current_14day.toFixed(0)}/day`;
+    }
+    if (targetEl) {
+        targetEl.textContent = `$${data.target.toFixed(0)}/day`;
+    }
+
+    // For explosion, show 30-day total instead of target
+    const totalEl = document.getElementById(`${group}-total`);
+    if (totalEl && data.curve) {
+        const total30 = data.curve.find(p => p.window === 30);
+        if (total30) {
+            totalEl.textContent = `$${(total30.daily_rate * 30).toFixed(0)}`;
+        }
+    }
+
+    // Update arrow with tooltip
     const arrow = document.getElementById(`${group}-arrow`);
-    arrow.className = `arrow ${data.arrow}`;
+    if (arrow) {
+        arrow.className = `arrow ${data.arrow}`;
+        // Add tooltip
+        if (data.arrow === 'improving') {
+            arrow.title = 'Spending trending down toward target';
+        } else if (data.arrow === 'worsening') {
+            arrow.title = 'Spending trending up away from target';
+        } else {
+            arrow.title = 'Spending stable';
+        }
+    }
 
     // Render chart
-    const ctx = document.getElementById(`${group}-chart`).getContext('2d');
-    const chartInstance = group === 'food' ? foodChart : discretionaryChart;
+    const canvas = document.getElementById(`${group}-chart`);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // Get existing chart instance
+    let chartInstance;
+    if (group === 'food') chartInstance = foodChart;
+    else if (group === 'discretionary') chartInstance = discretionaryChart;
+    else if (group === 'explosion') chartInstance = explosionChart;
 
     if (chartInstance) {
         chartInstance.destroy();
@@ -253,32 +268,34 @@ function renderBurnRateCard(group, data) {
 
     const labels = data.curve.map(p => `${p.window}d`);
     const values = data.curve.map(p => p.daily_rate);
-    const targetLine = data.curve.map(() => data.target);
+
+    const datasets = [
+        {
+            label: group.charAt(0).toUpperCase() + group.slice(1),
+            data: values,
+            borderColor: color,
+            backgroundColor: color + '1a',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+        }
+    ];
+
+    // Add target line only for food and discretionary
+    if (data.target > 0) {
+        datasets.push({
+            label: 'Target',
+            data: data.curve.map(() => data.target),
+            borderColor: '#22c55e',
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+        });
+    }
 
     const newChart = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Burn Rate',
-                    data: values,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                },
-                {
-                    label: 'Target',
-                    data: targetLine,
-                    borderColor: '#22c55e',
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    fill: false,
-                },
-            ],
-        },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -301,11 +318,87 @@ function renderBurnRateCard(group, data) {
         },
     });
 
-    if (group === 'food') {
-        foodChart = newChart;
-    } else {
-        discretionaryChart = newChart;
+    if (group === 'food') foodChart = newChart;
+    else if (group === 'discretionary') discretionaryChart = newChart;
+    else if (group === 'explosion') explosionChart = newChart;
+}
+
+function renderCombinedChart(data) {
+    const canvas = document.getElementById('combined-chart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    if (combinedChart) {
+        combinedChart.destroy();
     }
+
+    // Use food's labels as baseline
+    const labels = data.food.curve.map(p => `${p.window}d`);
+
+    const datasets = [];
+
+    if (data.food) {
+        datasets.push({
+            label: 'Food',
+            data: data.food.curve.map(p => p.daily_rate),
+            borderColor: chartColors.food,
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 0,
+        });
+    }
+
+    if (data.discretionary) {
+        datasets.push({
+            label: 'Discretionary',
+            data: data.discretionary.curve.map(p => p.daily_rate),
+            borderColor: chartColors.discretionary,
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 0,
+        });
+    }
+
+    if (data.explosion) {
+        datasets.push({
+            label: 'Explosions',
+            data: data.explosion.curve.map(p => p.daily_rate),
+            borderColor: chartColors.explosion,
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 0,
+        });
+    }
+
+    combinedChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#a3a3a3' }
+                },
+            },
+            scales: {
+                x: {
+                    grid: { color: '#262626' },
+                    ticks: { color: '#737373' },
+                },
+                y: {
+                    grid: { color: '#262626' },
+                    ticks: {
+                        color: '#737373',
+                        callback: v => `$${v}`,
+                    },
+                },
+            },
+        },
+    });
 }
 
 async function handleFeedback(e) {
@@ -331,7 +424,6 @@ async function handleFeedback(e) {
 // Transactions
 async function loadTransactions() {
     const params = {
-        account_id: document.getElementById('account-filter').value,
         category_id: document.getElementById('category-filter').value,
         start_date: document.getElementById('start-date').value,
         end_date: document.getElementById('end-date').value,
@@ -341,6 +433,10 @@ async function loadTransactions() {
     try {
         const data = await api.getTransactions(params);
         renderTransactionsTable(data.transactions);
+
+        // Update badge with uncategorized count
+        const uncategorizedCount = data.transactions.filter(t => !t.category_id).length;
+        updateReviewBadge(uncategorizedCount);
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
@@ -369,37 +465,58 @@ function renderTransactionsTable(transactions) {
                 hozAlign: 'right',
                 formatter: (cell) => {
                     const val = cell.getValue();
-                    const formatted = '$' + Math.abs(val).toFixed(2);
-                    const color = val < 0 ? '#ef4444' : '#22c55e';
-                    return `<span style="color: ${color}">${val < 0 ? '-' : '+'}${formatted}</span>`;
+                    return '$' + Math.abs(val).toFixed(2);
                 }
             },
             {
                 title: 'Category',
                 field: 'category_id',
-                width: 140,
+                width: 200,
                 formatter: (cell, formatterParams, onRendered) => {
                     const data = cell.getRow().getData();
                     const catId = data.category_id;
-                    let html = `<select class="inline-category-select" data-txn-id="${data.id}">`;
+                    const isUncategorized = !catId;
+
+                    let html = '<div class="category-cell-wrapper">';
+
+                    // Show checkbox only for uncategorized transactions (default checked)
+                    if (isUncategorized) {
+                        html += `<input type="checkbox" class="rule-checkbox" data-txn-id="${data.id}" checked title="Create rule">`;
+                    }
+
+                    html += `<select class="inline-category-select" data-txn-id="${data.id}">`;
                     html += `<option value="" ${!catId ? 'selected' : ''}>Uncategorized</option>`;
                     categories.forEach(cat => {
                         const selected = catId === cat.id ? 'selected' : '';
                         html += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
                     });
-                    html += '</select>';
+                    html += '</select></div>';
 
                     onRendered(() => {
-                        const select = cell.getElement().querySelector('.inline-category-select');
+                        const wrapper = cell.getElement().querySelector('.category-cell-wrapper');
+                        const select = wrapper?.querySelector('.inline-category-select');
+                        const checkbox = wrapper?.querySelector('.rule-checkbox');
+
                         if (select) {
                             select.addEventListener('change', async (e) => {
                                 const txnId = parseInt(e.target.dataset.txnId);
                                 const categoryId = e.target.value ? parseInt(e.target.value) : null;
+                                const createRule = checkbox ? checkbox.checked : false;
+
                                 try {
-                                    await api.categorize(txnId, categoryId, false);
+                                    const result = await api.categorize(txnId, categoryId, createRule);
                                     data.category_id = categoryId;
                                     data.category_name = categoryId ? categories.find(c => c.id === categoryId)?.name : null;
-                                    showToast('Category updated', 'success');
+
+                                    if (createRule && result.auto_categorized > 0) {
+                                        showToast(`Categorized! ${result.auto_categorized} similar transactions also updated.`, 'success');
+                                        // Reload to show updated transactions
+                                        await loadTransactions();
+                                    } else {
+                                        showToast('Category updated', 'success');
+                                        // Just update this row - remove checkbox since now categorized
+                                        cell.getRow().update(data);
+                                    }
                                 } catch (error) {
                                     showToast(error.message, 'error');
                                 }
@@ -410,120 +527,8 @@ function renderTransactionsTable(transactions) {
                     return html;
                 }
             },
-            { title: 'Account', field: 'account_name', width: 120 },
-            {
-                title: 'Flags',
-                field: 'is_explosion',
-                width: 80,
-                hozAlign: 'center',
-                formatter: (cell) => {
-                    const data = cell.getRow().getData();
-                    const explosionClass = data.is_explosion ? 'active' : '';
-                    const recurringClass = data.is_recurring ? 'active' : '';
-                    return `<span class="flag-btn explosion-flag ${explosionClass}" title="Explosion (one-off)">💥</span>
-                            <span class="flag-btn recurring-flag ${recurringClass}" title="Recurring">🔄</span>`;
-                },
-                cellClick: async (e, cell) => {
-                    const target = e.target;
-                    const data = cell.getRow().getData();
-
-                    if (target.classList.contains('explosion-flag')) {
-                        try {
-                            const result = await api.toggleExplosion(data.id);
-                            data.is_explosion = result.is_explosion;
-                            cell.getRow().update(data);
-                            showToast(result.is_explosion ? 'Marked as explosion' : 'Unmarked explosion', 'success');
-                        } catch (error) {
-                            showToast(error.message, 'error');
-                        }
-                    } else if (target.classList.contains('recurring-flag')) {
-                        try {
-                            const result = await api.toggleRecurring(data.id);
-                            data.is_recurring = result.is_recurring;
-                            cell.getRow().update(data);
-                            showToast(result.is_recurring ? 'Marked as recurring' : 'Unmarked recurring', 'success');
-                        } catch (error) {
-                            showToast(error.message, 'error');
-                        }
-                    }
-                }
-            },
         ],
     });
-}
-
-// Review Queue
-async function loadReviewQueue() {
-    const sort = document.getElementById('review-sort').value;
-    showLoading();
-    try {
-        const data = await api.getReviewQueue(sort);
-        renderReviewList(data.transactions);
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-function renderReviewList(transactions) {
-    const container = document.getElementById('review-list');
-
-    if (transactions.length === 0) {
-        container.innerHTML = '<div class="dashboard-placeholder"><p>No transactions to review!</p></div>';
-        return;
-    }
-
-    container.innerHTML = transactions.map(txn => `
-        <div class="review-item" data-id="${txn.id}">
-            <div class="review-item-info">
-                <div class="review-item-date">${txn.date} &middot; ${txn.account_name}</div>
-                <div class="review-item-desc">${escapeHtml(txn.description)}</div>
-            </div>
-            <div class="review-item-amount ${txn.amount < 0 ? 'negative' : 'positive'}">
-                ${txn.amount < 0 ? '-' : '+'}$${Math.abs(txn.amount).toFixed(2)}
-            </div>
-            <select class="category-select">
-                <option value="">Select category...</option>
-                ${renderCategoryOptions()}
-            </select>
-        </div>
-    `).join('');
-
-    container.querySelectorAll('.category-select').forEach(select => {
-        select.addEventListener('change', async (e) => {
-            const item = e.target.closest('.review-item');
-            const txnId = item.dataset.id;
-            const categoryId = e.target.value;
-
-            if (!categoryId) return;
-
-            try {
-                const result = await api.categorize(parseInt(txnId), parseInt(categoryId), true);
-
-                // Always reload the review queue to show updated state
-                if (result.auto_categorized > 0) {
-                    showToast(`Categorized! ${result.auto_categorized} similar transactions also updated.`, 'success');
-                } else {
-                    showToast('Categorized!', 'success');
-                }
-
-                // Reload to refresh the list
-                await loadReviewQueue();
-            } catch (error) {
-                showToast(error.message, 'error');
-            }
-        });
-    });
-}
-
-function renderCategoryOptions() {
-    // Flat list of categories - no optgroups needed
-    let html = '';
-    categories.forEach(cat => {
-        html += `<option value="${cat.id}">${cat.name}</option>`;
-    });
-    return html;
 }
 
 // Rules
@@ -626,19 +631,18 @@ async function handleSaveRule(e) {
 async function handleUpload(e) {
     e.preventDefault();
 
-    const accountId = document.getElementById('account-select').value;
     const fileInput = document.getElementById('csv-file');
     const file = fileInput.files[0];
 
-    if (!accountId || !file) {
-        showToast('Please select an account and file', 'error');
+    if (!file) {
+        showToast('Please select a file', 'error');
         return;
     }
 
     showLoading();
     try {
         const csvContent = await file.text();
-        const result = await api.upload(parseInt(accountId), csvContent);
+        const result = await api.upload(csvContent);
 
         uploadStatus.innerHTML = `
             <div><strong>${result.new_count}</strong> new transactions imported</div>
@@ -693,46 +697,6 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
-}
-
-// Categories View (read-only - 5 fixed categories)
-async function loadCategories() {
-    showLoading();
-    try {
-        const data = await api.getCategories();
-        categories = data.categories;
-        renderCategoriesList(categories);
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-function renderCategoriesList(cats) {
-    const container = document.getElementById('categories-list');
-
-    // Simple list of the 5 fixed categories with descriptions
-    const descriptions = {
-        'Food': 'Groceries, restaurants, coffee, takeout - tracked in burn rate',
-        'Discretionary': 'Shopping, entertainment, hobbies - tracked in burn rate',
-        'Recurring': 'Rent, utilities, subscriptions - excluded from burn rate',
-        'Explosion': 'One-off large purchases - excluded from burn rate',
-        'Excluded': 'Transfers, income, payments - excluded from burn rate'
-    };
-
-    let html = '';
-    cats.forEach(cat => {
-        const desc = descriptions[cat.name] || cat.burn_rate_group;
-        html += `
-            <div class="category-item">
-                <div class="category-item-name">${escapeHtml(cat.name)}</div>
-                <div class="category-item-desc">${desc}</div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
 }
 
 // Utils

@@ -671,3 +671,39 @@ body {
     outline: none;
     border-color: var(--accent);
 }
+
+/* Color-coded burn rate cards */
+.burn-rate-card.food-card {
+    border-left: 3px solid #3b82f6;
+}
+
+.burn-rate-card.discretionary-card {
+    border-left: 3px solid #8b5cf6;
+}
+
+.burn-rate-card.explosion-card {
+    border-left: 3px solid #f97316;
+}
+
+.burn-rate-card.combined-card {
+    border-left: 3px solid var(--text-muted);
+}
+
+/* Larger chart container for combined view */
+.chart-container-large {
+    height: 200px;
+}
+
+/* Rule checkbox in category cell */
+.category-cell-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rule-checkbox {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
