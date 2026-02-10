@@ -7,6 +7,7 @@ const API_BASE = '/api';
 class ApiClient {
     constructor() {
         this.token = localStorage.getItem('token');
+        this.role = localStorage.getItem('role');
     }
 
     async request(path, options = {}) {
@@ -44,13 +45,21 @@ class ApiClient {
             body: JSON.stringify({ password }),
         });
         this.token = data.token;
+        this.role = data.role;
         localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
         return data;
     }
 
     logout() {
         this.token = null;
+        this.role = null;
         localStorage.removeItem('token');
+        localStorage.removeItem('role');
+    }
+
+    isAdmin() {
+        return this.role === 'admin';
     }
 
     isAuthenticated() {

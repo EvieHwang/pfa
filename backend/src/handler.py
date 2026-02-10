@@ -212,11 +212,12 @@ def handle_login(event: dict) -> dict:
     if not password:
         return error_response(400, "Password required")
 
-    if not auth.verify_password(password):
+    is_valid, role = auth.verify_password(password)
+    if not is_valid:
         return error_response(401, "Invalid password", "INVALID_PASSWORD")
 
-    token = auth.generate_token()
-    return json_response(200, {"token": token})
+    token = auth.generate_token(role)
+    return json_response(200, {"token": token, "role": role})
 
 
 def handle_upload(event: dict) -> dict:

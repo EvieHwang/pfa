@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 JWT_EXPIRY_HOURS = 24
 JWT_ALGORITHM = "HS256"
 
+# Default homeowner password hash (password: "Pokemon")
+HOMEOWNER_PASSWORD_HASH = "$2b$12$JaATkaBV6Pz6sa32FTdgTuzmF9mbQ0eNh5.oTQ0WFxKxDuYiloC7O"
+
 # Cached secrets
 _secrets_cache: dict | None = None
 
@@ -51,26 +54,39 @@ def _get_secrets() -> dict:
         raise
 
 
-def verify_password(password: str) -> bool:
-    """Verify the password against stored bcrypt hash."""
+def verify_password(password: str) -> tuple[bool, str | None]:
+    """Verify the password against stored hashes.
+
+    Returns (is_valid, role) where role is 'admin' or 'homeowner'.
+    """
     import bcrypt
 
     secrets = _get_secrets()
-    stored_hash = secrets.get("PASSWORD_HASH", "")
+    password_bytes = password.encode()
 
-    if not stored_hash:
-        logger.error("No PASSWORD_HASH configured")
-        return False
+    # Check admin password
+    admin_hash = secrets.get("PASSWORD_HASH", "")
+    if admin_hash:
+        try:
+            if bcrypt.checkpw(password_bytes, admin_hash.encode()):
+                return True, "admin"
+        except Exception as e:
+            logger.error(f"Admin password verification error: {e}")
 
-    try:
-        return bcrypt.checkpw(password.encode(), stored_hash.encode())
-    except Exception as e:
-        logger.error(f"Password verification error: {e}")
-        return False
+    # Check homeowner password
+    homeowner_hash = secrets.get("HOMEOWNER_PASSWORD_HASH", HOMEOWNER_PASSWORD_HASH)
+    if homeowner_hash:
+        try:
+            if bcrypt.checkpw(password_bytes, homeowner_hash.encode()):
+                return True, "homeowner"
+        except Exception as e:
+            logger.error(f"Homeowner password verification error: {e}")
+
+    return False, None
 
 
-def generate_token() -> str:
-    """Generate a JWT token."""
+def generate_token(role: str = "admin") -> str:
+    """Generate a JWT token with role."""
     secrets = _get_secrets()
     jwt_secret = secrets.get("JWT_SECRET", "")
 
@@ -81,6 +97,7 @@ def generate_token() -> str:
     header = {"alg": JWT_ALGORITHM, "typ": "JWT"}
     payload = {
         "sub": "user",
+        "role": role,
         "iat": int(time.time()),
         "exp": int(time.time()) + (JWT_EXPIRY_HOURS * 3600),
     }
