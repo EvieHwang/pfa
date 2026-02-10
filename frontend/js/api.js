@@ -169,8 +169,9 @@ class ApiClient {
     }
 
     // Burn Rate
-    async getBurnRate() {
-        return this.request('/burn-rate');
+    async getBurnRate(intensity = null) {
+        const params = intensity !== null ? `?intensity=${intensity}` : '';
+        return this.request(`/burn-rate${params}`);
     }
 
     async getTargets() {
@@ -184,6 +185,18 @@ class ApiClient {
                 burn_rate_group: burnRateGroup,
                 sentiment,
             }),
+        });
+    }
+
+    // Intensity Settings
+    async getIntensity() {
+        return this.request('/settings/intensity');
+    }
+
+    async setIntensity(intensity) {
+        return this.request('/settings/intensity', {
+            method: 'PUT',
+            body: JSON.stringify({ intensity }),
         });
     }
 }

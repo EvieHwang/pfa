@@ -115,18 +115,43 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     cursor = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'"
     )
-    if cursor.fetchone() is not None:
-        return  # Schema already exists
+    if cursor.fetchone() is None:
+        # Fresh database - run full schema
+        logger.info("Initializing database schema")
+        schema_path = Path(__file__).parent / "schema.sql"
+        if schema_path.exists():
+            with open(schema_path) as f:
+                conn.executescript(f.read())
+            conn.commit()
+            logger.info("Schema initialized successfully")
+        else:
+            logger.warning("schema.sql not found, database will be empty")
+        return
 
-    logger.info("Initializing database schema")
-    schema_path = Path(__file__).parent / "schema.sql"
-    if schema_path.exists():
-        with open(schema_path) as f:
-            conn.executescript(f.read())
+    # Existing database - run migrations
+    _run_migrations(conn)
+
+
+def _run_migrations(conn: sqlite3.Connection) -> None:
+    """Run migrations for existing databases."""
+    # Migration: Add user_settings table if it doesn't exist
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_settings'"
+    )
+    if cursor.fetchone() is None:
+        logger.info("Migration: adding user_settings table")
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS user_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                setting_key TEXT NOT NULL UNIQUE,
+                setting_value TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES
+                ('curve_intensity', '0.5');
+        """)
         conn.commit()
-        logger.info("Schema initialized successfully")
-    else:
-        logger.warning("schema.sql not found, database will be empty")
+        logger.info("Migration: user_settings table created")
 
 
 def execute(sql: str, params: tuple = ()) -> sqlite3.Cursor:
