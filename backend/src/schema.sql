@@ -105,15 +105,3 @@ INSERT OR IGNORE INTO categories (id, name, burn_rate_group, parent_id) VALUES
 INSERT OR IGNORE INTO targets (burn_rate_group, daily_target) VALUES
     ('food', 30.00),
     ('discretionary', 20.00);
-
--- User settings table (key-value store for user preferences)
-CREATE TABLE IF NOT EXISTS user_settings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    setting_key TEXT NOT NULL UNIQUE,
-    setting_value TEXT NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed default intensity setting
-INSERT OR IGNORE INTO user_settings (setting_key, setting_value) VALUES
-    ('curve_intensity', '0.5');

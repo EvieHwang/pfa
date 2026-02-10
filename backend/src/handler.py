@@ -3,7 +3,6 @@
 import base64
 import json
 import logging
-import math
 import traceback
 from typing import Any
 
@@ -179,13 +178,6 @@ def lambda_handler(event: dict, context: Any) -> dict:
 
         if normalized_path == "/targets" and http_method == "GET":
             return handle_get_targets(event)
-
-        # Settings routes
-        if normalized_path == "/settings/intensity":
-            if http_method == "GET":
-                return handle_get_intensity(event)
-            if http_method == "PUT":
-                return handle_set_intensity(event)
 
         return error_response(404, f"Not found: {http_method} {path}", "NOT_FOUND")
 
@@ -747,93 +739,11 @@ def handle_toggle_explosion(event: dict, transaction_id: int) -> dict:
 
 # --- Phase 3: Burn Rate ---
 
-# Intensity dial constants
-HIGH_HALFLIFE = 20.0  # days - gentle (intensity=0)
-LOW_HALFLIFE = 4.0    # days - responsive (intensity=1)
-MAX_WINDOW = 45       # maximum window size for full curve
-MIN_VISIBLE = 12      # minimum visible range in days
-FLAT_THRESHOLD = 0.5  # $/day - slope below this is "flat"
-FLAT_CONSECUTIVE = 3  # consecutive flat points needed
-
-
-def calculate_half_life(intensity: float) -> float:
-    """Convert intensity (0.0-1.0) to half-life in days.
-
-    intensity=0.0 (Gentle): half_life=20 days (slow decay, long memory)
-    intensity=1.0 (Responsive): half_life=4 days (fast decay, recent focus)
-    """
-    return HIGH_HALFLIFE - ((HIGH_HALFLIFE - LOW_HALFLIFE) * intensity)
-
-
-def calculate_weight(day_offset: int, half_life: float) -> float:
-    """Exponential decay weight for a transaction d days ago.
-
-    weight(d) = exp(-lambda * d) where lambda = ln(2) / half_life
-    """
-    decay_constant = math.log(2) / half_life
-    return math.exp(-decay_constant * day_offset)
-
-
-def detect_flatness(curve: list[dict], threshold: float = FLAT_THRESHOLD, consecutive: int = FLAT_CONSECUTIVE) -> int:
-    """Detect where the curve becomes flat.
-
-    Returns the window day where flatness begins, or MAX_WINDOW if no flat region.
-    Flatness = |slope| < threshold for consecutive points.
-    """
-    for i in range(len(curve) - consecutive):
-        is_flat = True
-        for j in range(consecutive):
-            if i + j + 1 < len(curve):
-                slope = abs(curve[i + j + 1]["daily_rate"] - curve[i + j]["daily_rate"])
-                if slope >= threshold:
-                    is_flat = False
-                    break
-        if is_flat:
-            return curve[i]["window"]
-    return MAX_WINDOW
-
-
-def compute_visible_range(flat_boundary: int) -> list[int]:
-    """Compute visible window: ~2/3 signal, ~1/3 flat zone.
-
-    Clamp to MIN_VISIBLE-MAX_WINDOW days visible.
-    """
-    # Signal portion is from day 5 to flat_boundary
-    signal_days = flat_boundary - 5
-
-    # Show 2/3 signal + 1/3 flat = extend past flat_boundary by half the signal
-    flat_extension = max(0, signal_days // 2)
-    visible_end = min(MAX_WINDOW, flat_boundary + flat_extension)
-
-    # Ensure minimum visible range
-    if visible_end - 5 < MIN_VISIBLE:
-        visible_end = min(MAX_WINDOW, 5 + MIN_VISIBLE)
-
-    return [5, visible_end]
-
 
 def handle_get_burn_rate(event: dict) -> dict:
-    """Get current burn rate curves with exponential weighting.
-
-    Query params:
-        intensity: float 0.0-1.0 (optional, defaults to user setting)
-    """
+    """Get current burn rate curves for both groups."""
     from datetime import datetime, timedelta
 
-    # Get intensity from query param or user settings
-    params = event.get("queryStringParameters") or {}
-    intensity_param = params.get("intensity")
-
-    if intensity_param is not None:
-        intensity = max(0.0, min(1.0, float(intensity_param)))
-    else:
-        # Load from user_settings
-        setting = database.fetchone(
-            "SELECT setting_value FROM user_settings WHERE setting_key = 'curve_intensity'"
-        )
-        intensity = float(setting["setting_value"]) if setting else 0.5
-
-    half_life = calculate_half_life(intensity)
     today = datetime.now().date()
     result = {}
 
@@ -851,56 +761,32 @@ def handle_get_burn_rate(event: dict) -> dict:
         cat_ids = [c["id"] for c in categories]
 
         if not cat_ids:
-            result[group] = {
-                "curve": [],
-                "target": target,
-                "arrow": "neutral",
-                "visible_range": [5, 17],
-                "flat_boundary": 17,
-                "intensity": intensity,
-            }
+            result[group] = {"curve": [], "target": target, "arrow": "neutral"}
             continue
 
-        # Fetch all transactions in the MAX_WINDOW-day window
-        start_date = (today - timedelta(days=MAX_WINDOW)).isoformat()
-        end_date = today.isoformat()
-
-        placeholders = ",".join("?" * len(cat_ids))
-        transactions = database.fetchall(
-            f"""
-            SELECT date, ABS(amount) as amount
-            FROM transactions
-            WHERE category_id IN ({placeholders})
-            AND date >= ? AND date <= ?
-            AND is_recurring = 0
-            AND is_explosion = 0
-            AND amount < 0
-            """,
-            (*cat_ids, start_date, end_date),
-        )
-
-        # Compute weighted burn rate for windows 5-MAX_WINDOW days
+        # Compute burn rate for windows 5-30 days
         curve = []
-        for window in range(5, MAX_WINDOW + 1):
-            window_start = today - timedelta(days=window)
+        for window in range(5, 31):
+            start_date = (today - timedelta(days=window)).isoformat()
+            end_date = today.isoformat()
 
-            total_weighted = 0.0
-            total_weight = 0.0
+            # Sum expenses in this window (negative amounts = expenses)
+            placeholders = ",".join("?" * len(cat_ids))
+            row = database.fetchone(
+                f"""
+                SELECT COALESCE(SUM(ABS(amount)), 0) as total
+                FROM transactions
+                WHERE category_id IN ({placeholders})
+                AND date >= ? AND date <= ?
+                AND is_recurring = 0
+                AND is_explosion = 0
+                AND amount < 0
+                """,
+                (*cat_ids, start_date, end_date),
+            )
 
-            for txn in transactions:
-                txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
-                if txn_date >= window_start:
-                    days_ago = (today - txn_date).days
-                    weight = calculate_weight(days_ago, half_life)
-                    total_weighted += float(txn["amount"]) * weight
-                    total_weight += weight
-
-            # Weighted average normalized by window size
-            if total_weight > 0:
-                daily_rate = total_weighted / window
-            else:
-                daily_rate = 0.0
-
+            total = float(row["total"]) if row else 0
+            daily_rate = total / window
             deviation = daily_rate - target
 
             curve.append({
@@ -909,14 +795,9 @@ def handle_get_burn_rate(event: dict) -> dict:
                 "deviation": round(deviation, 2),
             })
 
-        # Detect flatness and compute visible range
-        flat_boundary = detect_flatness(curve)
-        visible_range = compute_visible_range(flat_boundary)
-
-        # Compute arrow based on visible portion only (not flat zone)
-        visible_curve = [p for p in curve if p["window"] <= flat_boundary]
-        if len(visible_curve) >= 5:
-            recent = [p["deviation"] for p in visible_curve[-5:]]
+        # Compute arrow (slope of last 5 points)
+        if len(curve) >= 5:
+            recent = [p["deviation"] for p in curve[-5:]]
             slope = (recent[-1] - recent[0]) / 4
             if slope < -1:
                 arrow = "improving"  # Converging toward target
@@ -927,17 +808,11 @@ def handle_get_burn_rate(event: dict) -> dict:
         else:
             arrow = "neutral"
 
-        # Find 14-day rate
-        current_14day = next((p["daily_rate"] for p in curve if p["window"] == 14), 0)
-
         result[group] = {
             "curve": curve,
             "target": target,
             "arrow": arrow,
-            "current_14day": current_14day,
-            "visible_range": visible_range,
-            "flat_boundary": flat_boundary,
-            "intensity": intensity,
+            "current_14day": curve[9]["daily_rate"] if len(curve) > 9 else 0,  # 14-day is index 9
         }
 
     return json_response(200, result)
@@ -1004,46 +879,3 @@ def handle_get_targets(event: dict) -> dict:
     """Get current targets for all groups."""
     targets = database.fetchall("SELECT * FROM targets")
     return json_response(200, {"targets": database.dicts_from_rows(targets)})
-
-
-# --- Settings ---
-
-
-def handle_get_intensity(event: dict) -> dict:
-    """Get current curve intensity setting."""
-    setting = database.fetchone(
-        "SELECT setting_value FROM user_settings WHERE setting_key = 'curve_intensity'"
-    )
-    intensity = float(setting["setting_value"]) if setting else 0.5
-    return json_response(200, {"intensity": intensity})
-
-
-def handle_set_intensity(event: dict) -> dict:
-    """Set curve intensity setting."""
-    body = parse_body(event)
-    if not body:
-        return error_response(400, "Request body required")
-
-    intensity = body.get("intensity")
-    if intensity is None:
-        return error_response(400, "intensity required")
-
-    # Validate and clamp range
-    intensity = max(0.0, min(1.0, float(intensity)))
-
-    # Upsert the setting
-    database.execute(
-        """
-        INSERT INTO user_settings (setting_key, setting_value, updated_at)
-        VALUES ('curve_intensity', ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(setting_key) DO UPDATE SET
-            setting_value = excluded.setting_value,
-            updated_at = CURRENT_TIMESTAMP
-        """,
-        (str(intensity),),
-    )
-
-    database.commit()
-    database.upload_database()
-
-    return json_response(200, {"intensity": intensity, "success": True})

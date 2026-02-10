@@ -8,7 +8,6 @@ let categories = [];
 let transactionsTable = null;
 let foodChart = null;
 let discretionaryChart = null;
-let currentIntensity = 0.5;
 
 // DOM Elements
 const loginModal = document.getElementById('login-modal');
@@ -85,13 +84,6 @@ function setupEventListeners() {
 
     // Review queue sort
     document.getElementById('review-sort').addEventListener('change', loadReviewQueue);
-
-    // Intensity slider - debounced to avoid API spam
-    let intensityTimeout = null;
-    document.getElementById('intensity-slider').addEventListener('input', (e) => {
-        clearTimeout(intensityTimeout);
-        intensityTimeout = setTimeout(() => handleIntensityChange(e.target.value), 300);
-    });
 }
 
 // Auth
@@ -232,33 +224,7 @@ function switchView(viewName) {
 async function loadDashboard() {
     showLoading();
     try {
-        // Load intensity setting first
-        const intensityData = await api.getIntensity();
-        currentIntensity = intensityData.intensity;
-        document.getElementById('intensity-slider').value = currentIntensity;
-
-        // Load burn rate data with current intensity
-        const data = await api.getBurnRate(currentIntensity);
-        renderBurnRateCard('food', data.food);
-        renderBurnRateCard('discretionary', data.discretionary);
-    } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function handleIntensityChange(value) {
-    const intensity = parseFloat(value);
-    currentIntensity = intensity;
-
-    showLoading();
-    try {
-        // Save to backend
-        await api.setIntensity(intensity);
-
-        // Reload curves with new intensity
-        const data = await api.getBurnRate(intensity);
+        const data = await api.getBurnRate();
         renderBurnRateCard('food', data.food);
         renderBurnRateCard('discretionary', data.discretionary);
     } catch (error) {
@@ -285,15 +251,9 @@ function renderBurnRateCard(group, data) {
         chartInstance.destroy();
     }
 
-    // Filter curve to visible range (auto-framing)
-    const visibleRange = data.visible_range || [5, 30];
-    const visibleCurve = data.curve.filter(
-        p => p.window >= visibleRange[0] && p.window <= visibleRange[1]
-    );
-
-    const labels = visibleCurve.map(p => `${p.window}d`);
-    const values = visibleCurve.map(p => p.daily_rate);
-    const targetLine = visibleCurve.map(() => data.target);
+    const labels = data.curve.map(p => `${p.window}d`);
+    const values = data.curve.map(p => p.daily_rate);
+    const targetLine = data.curve.map(() => data.target);
 
     const newChart = new Chart(ctx, {
         type: 'line',
