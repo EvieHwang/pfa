@@ -45,85 +45,86 @@
             <!-- Dashboard View -->
             <div id="dashboard-view" class="view">
                 <div class="burn-rate-cards">
-                    <!-- Food Card -->
-                    <div class="burn-rate-card food-card" id="food-card">
-                        <div class="card-header">
-                            <h3>Food</h3>
-                            <span class="arrow" id="food-arrow"></span>
-                        </div>
-                        <div class="card-stats">
-                            <div class="stat">
-                                <span class="stat-value" id="food-current">$0</span>
-                                <span class="stat-label">14-day avg</span>
+                    <!-- Category Cards Row -->
+                    <div class="category-cards-row">
+                        <!-- Food Card -->
+                        <div class="burn-rate-card food-card" id="food-card">
+                            <div class="card-header">
+                                <h3>Food</h3>
+                                <span class="arrow" id="food-arrow"></span>
                             </div>
-                            <div class="stat">
-                                <span class="stat-value" id="food-target">$0</span>
-                                <span class="stat-label">target</span>
+                            <div class="card-stats">
+                                <div class="stat">
+                                    <span class="stat-value" id="food-current">$0</span>
+                                    <span class="stat-label">14-day avg</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value" id="food-target">$0</span>
+                                    <span class="stat-label">target</span>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="food-chart"></canvas>
+                            </div>
+                            <div class="feedback-buttons">
+                                <button class="btn btn-good" data-group="food" data-sentiment="good">Loosen Up</button>
+                                <button class="btn btn-bad" data-group="food" data-sentiment="bad">Tighten Up</button>
                             </div>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="food-chart"></canvas>
+
+                        <!-- Discretionary Card -->
+                        <div class="burn-rate-card discretionary-card" id="discretionary-card">
+                            <div class="card-header">
+                                <h3>Discretionary</h3>
+                                <span class="arrow" id="discretionary-arrow"></span>
+                            </div>
+                            <div class="card-stats">
+                                <div class="stat">
+                                    <span class="stat-value" id="discretionary-current">$0</span>
+                                    <span class="stat-label">14-day avg</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value" id="discretionary-target">$0</span>
+                                    <span class="stat-label">target</span>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="discretionary-chart"></canvas>
+                            </div>
+                            <div class="feedback-buttons">
+                                <button class="btn btn-good" data-group="discretionary" data-sentiment="good">Loosen Up</button>
+                                <button class="btn btn-bad" data-group="discretionary" data-sentiment="bad">Tighten Up</button>
+                            </div>
                         </div>
-                        <div class="feedback-buttons">
-                            <button class="btn btn-good" data-group="food" data-sentiment="good">Loosen Up</button>
-                            <button class="btn btn-bad" data-group="food" data-sentiment="bad">Tighten Up</button>
+
+                        <!-- Explosion Card -->
+                        <div class="burn-rate-card explosion-card" id="explosion-card">
+                            <div class="card-header">
+                                <h3>Explosions</h3>
+                                <span class="arrow" id="explosion-arrow"></span>
+                            </div>
+                            <div class="card-stats">
+                                <div class="stat">
+                                    <span class="stat-value" id="explosion-current">$0</span>
+                                    <span class="stat-label">14-day avg</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value" id="explosion-total">$0</span>
+                                    <span class="stat-label">30-day total</span>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="explosion-chart"></canvas>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Discretionary Card -->
-                    <div class="burn-rate-card discretionary-card" id="discretionary-card">
-                        <div class="card-header">
-                            <h3>Discretionary</h3>
-                            <span class="arrow" id="discretionary-arrow"></span>
-                        </div>
-                        <div class="card-stats">
-                            <div class="stat">
-                                <span class="stat-value" id="discretionary-current">$0</span>
-                                <span class="stat-label">14-day avg</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-value" id="discretionary-target">$0</span>
-                                <span class="stat-label">target</span>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="discretionary-chart"></canvas>
-                        </div>
-                        <div class="feedback-buttons">
-                            <button class="btn btn-good" data-group="discretionary" data-sentiment="good">Loosen Up</button>
-                            <button class="btn btn-bad" data-group="discretionary" data-sentiment="bad">Tighten Up</button>
-                        </div>
-                    </div>
-
-                    <!-- Explosion Card -->
-                    <div class="burn-rate-card explosion-card" id="explosion-card">
-                        <div class="card-header">
-                            <h3>Explosions</h3>
-                            <span class="arrow" id="explosion-arrow"></span>
-                        </div>
-                        <div class="card-stats">
-                            <div class="stat">
-                                <span class="stat-value" id="explosion-current">$0</span>
-                                <span class="stat-label">14-day avg</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-value" id="explosion-total">$0</span>
-                                <span class="stat-label">30-day total</span>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="explosion-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Combined Chart Card -->
+                    <!-- Combined Chart Card (Full Width) -->
                     <div class="burn-rate-card combined-card" id="combined-card">
-                        <div class="card-header">
-                            <h3>All Spending</h3>
-                        </div>
-                        <div class="chart-container chart-container-large">
+                        <div class="chart-container chart-container-combined">
                             <canvas id="combined-chart"></canvas>
                         </div>
+                        <div class="combined-summary" id="combined-summary"></div>
                     </div>
                 </div>
             </div>

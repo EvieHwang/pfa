@@ -338,6 +338,7 @@ function renderCombinedChart(data) {
 
     const datasets = [];
 
+    // Food curve
     if (data.food) {
         datasets.push({
             label: 'Food',
@@ -347,8 +348,21 @@ function renderCombinedChart(data) {
             tension: 0.4,
             pointRadius: 0,
         });
+        // Food target line
+        if (data.food.target > 0) {
+            datasets.push({
+                label: 'Food Target',
+                data: data.food.curve.map(() => data.food.target),
+                borderColor: chartColors.food,
+                borderDash: [4, 4],
+                borderWidth: 1,
+                pointRadius: 0,
+                fill: false,
+            });
+        }
     }
 
+    // Discretionary curve
     if (data.discretionary) {
         datasets.push({
             label: 'Discretionary',
@@ -358,8 +372,21 @@ function renderCombinedChart(data) {
             tension: 0.4,
             pointRadius: 0,
         });
+        // Discretionary target line
+        if (data.discretionary.target > 0) {
+            datasets.push({
+                label: 'Discretionary Target',
+                data: data.discretionary.curve.map(() => data.discretionary.target),
+                borderColor: chartColors.discretionary,
+                borderDash: [4, 4],
+                borderWidth: 1,
+                pointRadius: 0,
+                fill: false,
+            });
+        }
     }
 
+    // Explosion curve
     if (data.explosion) {
         datasets.push({
             label: 'Explosions',
@@ -378,11 +405,7 @@ function renderCombinedChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: { color: '#a3a3a3' }
-                },
+                legend: { display: false },
             },
             scales: {
                 x: {
@@ -399,6 +422,49 @@ function renderCombinedChart(data) {
             },
         },
     });
+
+    // Populate compact summary row
+    const summaryEl = document.getElementById('combined-summary');
+    if (summaryEl) {
+        let summaryHtml = '';
+
+        if (data.food) {
+            summaryHtml += `
+                <div class="summary-item">
+                    <span class="summary-dot food"></span>
+                    <span>Food</span>
+                    <span class="summary-value">$${data.food.current_14day.toFixed(0)}</span>
+                    <span class="summary-target">→ $${data.food.target.toFixed(0)}</span>
+                </div>
+            `;
+        }
+
+        if (data.discretionary) {
+            summaryHtml += `
+                <div class="summary-item">
+                    <span class="summary-dot discretionary"></span>
+                    <span>Discr.</span>
+                    <span class="summary-value">$${data.discretionary.current_14day.toFixed(0)}</span>
+                    <span class="summary-target">→ $${data.discretionary.target.toFixed(0)}</span>
+                </div>
+            `;
+        }
+
+        if (data.explosion) {
+            const total30 = data.explosion.curve.find(p => p.window === 30);
+            const totalValue = total30 ? (total30.daily_rate * 30).toFixed(0) : '0';
+            summaryHtml += `
+                <div class="summary-item">
+                    <span class="summary-dot explosion"></span>
+                    <span>Explsn.</span>
+                    <span class="summary-value">$${totalValue}</span>
+                    <span class="summary-target">(30d)</span>
+                </div>
+            `;
+        }
+
+        summaryEl.innerHTML = summaryHtml;
+    }
 }
 
 async function handleFeedback(e) {
