@@ -324,6 +324,19 @@ function renderBurnRateCard(group, data, color) {
 }
 
 function renderCombinedChart(data) {
+    // Populate combined header stats
+    const combinedCurrentEl = document.getElementById('combined-current');
+    const combinedTargetEl = document.getElementById('combined-target');
+    if (combinedCurrentEl && combinedTargetEl) {
+        const totalCurrent = (data.food?.current_14day || 0)
+            + (data.discretionary?.current_14day || 0)
+            + (data.explosion?.current_14day || 0);
+        const totalTarget = (data.food?.target || 0)
+            + (data.discretionary?.target || 0);
+        combinedCurrentEl.textContent = `$${totalCurrent.toFixed(0)}`;
+        combinedTargetEl.textContent = `$${totalTarget.toFixed(0)}`;
+    }
+
     const canvas = document.getElementById('combined-chart');
     if (!canvas) return;
 
